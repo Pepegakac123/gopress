@@ -31,7 +31,7 @@ var rootCmd = &cobra.Command{
 		}
 		fmt.Printf("🔍 Skanowanie folderu: %s\n", appConfig.InputDir)
 
-		files, err := scanner.FindImages(appConfig.InputDir)
+		files, initialSize, err := scanner.FindImages(appConfig.InputDir)
 		if err != nil {
 			log.Fatalf("Bląd podczas skanowania %v", err)
 		}
@@ -43,7 +43,18 @@ var rootCmd = &cobra.Command{
 		if _, err := os.Stat(appConfig.OutputDir); os.IsNotExist(err) {
 			os.MkdirAll(appConfig.OutputDir, 0755)
 		}
-		processor.RunSimpleAsync(files, appConfig.OutputDir)
+		finalSize := processor.RunSimpleAsync(files, appConfig.OutputDir)
+
+		var savings float64
+		if initialSize > 0 {
+			savings = (1.0 - float64(finalSize)/float64(initialSize)) * 100
+		}
+		fmt.Println("\n--- 📊 Podsumowanie ---")
+		fmt.Printf("✅ Przetworzono obrazów: %d\n", len(files))
+		fmt.Printf("📦 Rozmiar przed:       %s\n", formatBytes(initialSize))
+		fmt.Printf("💾 Rozmiar po:          %s\n", formatBytes(finalSize))
+		fmt.Printf("📉 Oszczędność:         %.2f%%\n", savings)
+		fmt.Printf("📂 Folder wynikowy:     %s\n", appConfig.OutputDir)
 	},
 }
 
@@ -85,4 +96,17 @@ func runWizard() {
 		fmt.Println(err.Error())
 		os.Exit(1)
 	}
+}
+
+func formatBytes(size int64) string {
+	const unit = 1024
+	if size < unit {
+		return fmt.Sprintf("%d B", size)
+	}
+	div, exp := int64(unit), 0
+	for n := size / unit; n >= unit; n /= unit {
+		div *= unit
+		exp++
+	}
+	return fmt.Sprintf("%.2f %cB", float64(size)/float64(div), "KMGTPE"[exp])
 }
