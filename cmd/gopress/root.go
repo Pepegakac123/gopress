@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/AlecAivazis/survey/v2"
+	"github.com/Pepegakac123/gopress/internal/processor"
 	"github.com/Pepegakac123/gopress/internal/scanner"
 	"github.com/spf13/cobra"
 )
@@ -39,6 +40,10 @@ var rootCmd = &cobra.Command{
 			return
 		}
 		fmt.Printf("✅ Znaleziono %d obrazów do przetworzenia.\n", len(files))
+		if _, err := os.Stat(appConfig.OutputDir); os.IsNotExist(err) {
+			os.MkdirAll(appConfig.OutputDir, 0755)
+		}
+		processor.RunSimpleAsync(files, appConfig.OutputDir)
 	},
 }
 

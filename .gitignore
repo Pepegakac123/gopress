@@ -1,0 +1,7 @@
+# Binaries
+gopress.exe
+
+# Local data / Temp
+tmp_data/
+playground/
+*.log
