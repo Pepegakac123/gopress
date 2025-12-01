@@ -2,9 +2,11 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"os"
 
 	"github.com/AlecAivazis/survey/v2"
+	"github.com/Pepegakac123/gopress/internal/scanner"
 	"github.com/spf13/cobra"
 )
 
@@ -26,7 +28,17 @@ var rootCmd = &cobra.Command{
 		} else {
 			fmt.Println("Silent mode")
 		}
-		fmt.Printf("Config -> Input: %s | Output: %s\n", appConfig.InputDir, appConfig.OutputDir)
+		fmt.Printf("🔍 Skanowanie folderu: %s\n", appConfig.InputDir)
+
+		files, err := scanner.FindImages(appConfig.InputDir)
+		if err != nil {
+			log.Fatalf("Bląd podczas skanowania %v", err)
+		}
+		if len(files) == 0 {
+			log.Fatal("⚠️ Nie znaleziono plików")
+			return
+		}
+		fmt.Printf("✅ Znaleziono %d obrazów do przetworzenia.\n", len(files))
 	},
 }
 
