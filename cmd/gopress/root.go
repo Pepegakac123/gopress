@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/Pepegakac123/gopress/internal/processor"
@@ -19,14 +20,20 @@ type Config struct {
 var appConfig Config
 
 var rootCmd = &cobra.Command{
-	Use:   "gopress",
+	Use:   "gopress [input-dir]",
 	Short: "A tool for optimalizationa and publishing images to the wordpress",
 	Long: `GoPress is a CLI tool written in Golang. It allows user to convert large number of variety of images type to the webp format with optimalization options that make them
 	efficient for web usage. The tool provides a simple and intuitive interface for users to easily convert their images to the webp format, while also providing advanced options for fine-tuning the conversion process.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		if appConfig.InputDir == "" || appConfig.OutputDir == "" {
+		if appConfig.InputDir == "" && len(args) > 0 {
+			appConfig.InputDir = args[0]
+		}
+		if appConfig.InputDir == "" {
 			runWizard()
 		} else {
+			if appConfig.OutputDir == "" {
+				appConfig.OutputDir = filepath.Join(appConfig.InputDir, "webp")
+			}
 			fmt.Println("Silent mode")
 		}
 		fmt.Printf("🔍 Skanowanie folderu: %s\n", appConfig.InputDir)
@@ -72,26 +79,21 @@ func Execute() {
 
 func runWizard() {
 	fmt.Println("Tryb interaktywny: Nie podano flag, więc zadam kilka pytań...")
-	qs := []*survey.Question{
-		{
-			Name: "InputDir",
-			Prompt: &survey.Input{
-				Message: "Gdzie są zdjęcia (folder wejściowy)?",
-				Default: "./raw",
-			},
-			Validate: survey.Required,
-		},
-		{
-			Name: "OutputDir",
-			Prompt: &survey.Input{
-				Message: "Gdzie zapisać wyniki?",
-				Default: "./out",
-			},
-			Validate: survey.Required,
-		},
+	inputPrompt := &survey.Input{
+		Message: "Gdzie są zdjęcia (folder wejściowy)?",
+		Default: "./raw",
 	}
-
-	err := survey.Ask(qs, &appConfig)
+	err := survey.AskOne(inputPrompt, &appConfig.InputDir, survey.WithValidator(survey.Required))
+	if err != nil {
+		fmt.Println(err.Error())
+		os.Exit(1)
+	}
+	defaultOut := filepath.Join(appConfig.InputDir, "webp")
+	outputPrompt := &survey.Input{
+		Message: fmt.Sprintf("Gdzie zapisać wyniki? Zostaw puste, aby użyć domyślnej lokalizacji: %s", defaultOut),
+		Default: defaultOut,
+	}
+	err = survey.AskOne(outputPrompt, &appConfig.OutputDir)
 	if err != nil {
 		fmt.Println(err.Error())
 		os.Exit(1)
