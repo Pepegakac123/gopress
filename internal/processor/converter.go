@@ -10,15 +10,35 @@ import (
 
 	"github.com/chai2010/webp"
 	"github.com/disintegration/imaging"
+	"github.com/jdeng/goheif"
+
+	_ "golang.org/x/image/bmp"
+	_ "golang.org/x/image/tiff"
 )
 
 // ConvertFile bierze plik wejściowy, zmienia rozmiar i zapisuje jako WebP w outputDir.
 // To jest funkcja SYNCHRONICZNA (blokująca).
 func ConvertFile(inputPath string, outputDir string) error {
-
-	src, err := imaging.Open(inputPath)
+	file, err := os.Open(inputPath)
 	if err != nil {
 		return fmt.Errorf("nie udało się otworzyć pliku: %w", err)
+	}
+	defer file.Close()
+
+	var src image.Image
+
+	ext := strings.ToLower(filepath.Ext(inputPath))
+	if ext == ".heic" || ext == ".heif" {
+
+		src, err = goheif.Decode(file)
+		if err != nil {
+			return fmt.Errorf("błąd dekodowania HEIC: %w", err)
+		}
+	} else {
+		src, err = imaging.Decode(file)
+		if err != nil {
+			return fmt.Errorf("nieznany format obrazu: %w", err)
+		}
 	}
 	var dst image.Image
 

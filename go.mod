@@ -7,6 +7,7 @@ require (
 	github.com/chai2010/webp v1.4.0 // indirect
 	github.com/disintegration/imaging v1.6.2 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
+	github.com/jdeng/goheif v0.0.0-20251001174315-babb64285736 // indirect
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51 // indirect
 	github.com/mattn/go-colorable v0.1.2 // indirect
 	github.com/mattn/go-isatty v0.0.8 // indirect
