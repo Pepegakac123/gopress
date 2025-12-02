@@ -50,7 +50,7 @@ var rootCmd = &cobra.Command{
 		if _, err := os.Stat(appConfig.OutputDir); os.IsNotExist(err) {
 			os.MkdirAll(appConfig.OutputDir, 0755)
 		}
-		finalSize := processor.RunSimpleAsync(files, appConfig.OutputDir)
+		finalSize := processor.RunWorkerPool(files, appConfig.OutputDir)
 
 		var savings float64
 		if initialSize > 0 {
