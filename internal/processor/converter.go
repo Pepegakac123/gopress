@@ -18,10 +18,10 @@ import (
 
 // ConvertFile bierze plik wejściowy, zmienia rozmiar i zapisuje jako WebP w outputDir.
 // To jest funkcja SYNCHRONICZNA (blokująca).
-func ConvertFile(inputPath string, outputDir string) (int64, error) {
+func ConvertFile(inputPath string, outputDir string) (int64, string, error) {
 	file, err := os.Open(inputPath)
 	if err != nil {
-		return 0, fmt.Errorf("nie udało się otworzyć pliku: %w", err)
+		return 0, "", fmt.Errorf("nie udało się otworzyć pliku: %w", err)
 	}
 	defer file.Close()
 
@@ -32,12 +32,12 @@ func ConvertFile(inputPath string, outputDir string) (int64, error) {
 
 		src, err = goheif.Decode(file)
 		if err != nil {
-			return 0, fmt.Errorf("błąd dekodowania HEIC: %w", err)
+			return 0, "", fmt.Errorf("błąd dekodowania HEIC: %w", err)
 		}
 	} else {
 		src, err = imaging.Decode(file)
 		if err != nil {
-			return 0, fmt.Errorf("nieznany format obrazu: %w", err)
+			return 0, "", fmt.Errorf("nieznany format obrazu: %w", err)
 		}
 	}
 	var dst image.Image
@@ -59,7 +59,7 @@ func ConvertFile(inputPath string, outputDir string) (int64, error) {
 
 	outFile, err := os.Create(outPath)
 	if err != nil {
-		return 0, fmt.Errorf("nie udało się utworzyć pliku wyjściowego: %w", err)
+		return 0, "", fmt.Errorf("nie udało się utworzyć pliku wyjściowego: %w", err)
 	}
 	defer outFile.Close()
 
@@ -69,12 +69,12 @@ func ConvertFile(inputPath string, outputDir string) (int64, error) {
 	})
 	if err != nil {
 		os.Remove(outPath)
-		return 0, fmt.Errorf("błąd kodowania WebP: %w", err)
+		return 0, "", fmt.Errorf("błąd kodowania WebP: %w", err)
 	}
 	stat, err := outFile.Stat()
 	if err != nil {
-		return 0, nil
+		return 0, "", nil
 	}
 
-	return stat.Size(), nil
+	return stat.Size(), outPath, nil
 }

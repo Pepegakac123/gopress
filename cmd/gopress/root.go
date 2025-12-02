@@ -10,6 +10,7 @@ import (
 	"github.com/Pepegakac123/gopress/internal/processor"
 	"github.com/Pepegakac123/gopress/internal/scanner"
 	"github.com/Pepegakac123/gopress/internal/wordpress"
+	"github.com/schollz/progressbar/v3"
 	"github.com/spf13/cobra"
 )
 
@@ -65,11 +66,12 @@ var rootCmd = &cobra.Command{
 			log.Fatal("⚠️ Nie znaleziono plików")
 			return
 		}
+
 		fmt.Printf("✅ Znaleziono %d obrazów do przetworzenia.\n", len(files))
 		if _, err := os.Stat(appConfig.OutputDir); os.IsNotExist(err) {
 			os.MkdirAll(appConfig.OutputDir, 0755)
 		}
-		finalSize := processor.RunWorkerPool(files, appConfig.OutputDir)
+		finalSize, convertedFiles := processor.RunWorkerPool(files, appConfig.OutputDir)
 
 		var savings float64
 		if initialSize > 0 {
@@ -81,8 +83,23 @@ var rootCmd = &cobra.Command{
 		fmt.Printf("💾 Rozmiar po:          %s\n", formatBytes(finalSize))
 		fmt.Printf("📉 Oszczędność:         %.2f%%\n", savings)
 		fmt.Printf("📂 Folder wynikowy:     %s\n", appConfig.OutputDir)
-		if appConfig.Upload {
-			fmt.Println("🚀 (Tu wkrótce nastąpi wysyłanie plików do WP...)")
+		if appConfig.Upload && len(files) > 0 {
+			fmt.Println("Wysyłanie plików do wordpressa")
+			bar := progressbar.Default(int64(len(convertedFiles)))
+			var uploadErrors int
+			for _, filePath := range convertedFiles {
+				bar.Add(1)
+				_, err := wpClient.UploadFile(filePath)
+				if err != nil {
+					uploadErrors++
+				}
+			}
+			fmt.Println("\n")
+			if uploadErrors > 0 {
+				fmt.Printf("⚠️  Zakończono z błędami uploadu: %d\n", uploadErrors)
+			} else {
+				fmt.Println("🎉 Sukces! Wszystkie pliki wysłane.")
+			}
 		}
 	},
 }

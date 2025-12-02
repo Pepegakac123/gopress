@@ -41,10 +41,11 @@ import (
 
 // RunWorkerPool to bezpieczna wersja przetwarzania równoległego.
 // Zwraca łączny rozmiar przetworzonych plików (w bajtach).
-func RunWorkerPool(files []string, outputDir string) int64 {
+func RunWorkerPool(files []string, outputDir string) (int64, []string) {
 	start := time.Now()
 	var totalSize int64
-
+	var convertedFiles []string
+	var mu sync.Mutex
 	totalFiles := len(files)
 	numWorkers := runtime.NumCPU()
 	fmt.Printf("🚀 Rozpoczynam przetwarzanie %d plików (tryb: Worker Pool)...\n", totalFiles)
@@ -57,7 +58,7 @@ func RunWorkerPool(files []string, outputDir string) int64 {
 	var wg sync.WaitGroup
 	for i := 0; i < numWorkers; i++ {
 		wg.Add(1)
-		go worker(i, jobs, results, outputDir, &wg, &totalSize)
+		go worker(i, jobs, results, outputDir, &wg, &totalSize, &convertedFiles, &mu)
 	}
 	for _, file := range files {
 		jobs <- file
@@ -77,16 +78,19 @@ func RunWorkerPool(files []string, outputDir string) int64 {
 	if errorCount > 0 {
 		fmt.Printf("⚠️  Liczba błędów: %d\n", errorCount)
 	}
-	return atomic.LoadInt64(&totalSize)
+	return atomic.LoadInt64(&totalSize), convertedFiles
 }
 
 // worker wykonuje zadania z kanału jobs
-func worker(id int, jobs <-chan string, results chan<- error, outputDir string, wg *sync.WaitGroup, totalSize *int64) {
+func worker(id int, jobs <-chan string, results chan<- error, outputDir string, wg *sync.WaitGroup, totalSize *int64, convertedFiles *[]string, mu *sync.Mutex) {
 	defer wg.Done()
 
 	for filepath := range jobs {
-		size, err := ConvertFile(filepath, outputDir)
+		size, outPath, err := ConvertFile(filepath, outputDir)
 		if err == nil {
+			mu.Lock()
+			*convertedFiles = append(*convertedFiles, outPath)
+			defer mu.Unlock()
 			atomic.AddInt64(totalSize, int64(size))
 		}
 		results <- err
