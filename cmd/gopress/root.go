@@ -9,12 +9,17 @@ import (
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/Pepegakac123/gopress/internal/processor"
 	"github.com/Pepegakac123/gopress/internal/scanner"
+	"github.com/Pepegakac123/gopress/internal/wordpress"
 	"github.com/spf13/cobra"
 )
 
 type Config struct {
-	InputDir  string
-	OutputDir string
+	InputDir   string
+	OutputDir  string
+	Upload     bool
+	WpDomain   string
+	WpUser     string
+	WpPassword string
 }
 
 var appConfig Config
@@ -36,6 +41,20 @@ var rootCmd = &cobra.Command{
 			}
 			fmt.Println("Silent mode")
 		}
+
+		var wpClient *wordpress.Client
+		if appConfig.Upload {
+			if appConfig.WpDomain == "" || appConfig.WpUser == "" || appConfig.WpPassword == "" {
+				log.Fatal("❌ Błąd: Tryb --upload wymaga podania --wp-domain, --wp-user i --wp-secret")
+			}
+			fmt.Println("\n Łączenie z WordPress...")
+			wpClient = wordpress.NewClient(appConfig.WpDomain, appConfig.WpUser, appConfig.WpPassword)
+			if err := wpClient.CheckConnection(); err != nil {
+				log.Fatalf("Błąd połączenia z WP: %v", err)
+			}
+			fmt.Println("✅ Połączono z WordPress (Autoryzacja OK)")
+		}
+
 		fmt.Printf("🔍 Skanowanie folderu: %s\n", appConfig.InputDir)
 
 		files, initialSize, err := scanner.FindImages(appConfig.InputDir)
@@ -62,12 +81,19 @@ var rootCmd = &cobra.Command{
 		fmt.Printf("💾 Rozmiar po:          %s\n", formatBytes(finalSize))
 		fmt.Printf("📉 Oszczędność:         %.2f%%\n", savings)
 		fmt.Printf("📂 Folder wynikowy:     %s\n", appConfig.OutputDir)
+		if appConfig.Upload {
+			fmt.Println("🚀 (Tu wkrótce nastąpi wysyłanie plików do WP...)")
+		}
 	},
 }
 
 func init() {
 	rootCmd.Flags().StringVarP(&appConfig.InputDir, "input", "i", "", "Ścieżka do folderu z obrazami")
 	rootCmd.Flags().StringVarP(&appConfig.OutputDir, "output", "o", "", "Ścieżka gdzie zapisać wyniki")
+	rootCmd.Flags().BoolVar(&appConfig.Upload, "upload", false, "Włącz wysyłanie na WP")
+	rootCmd.Flags().StringVar(&appConfig.WpDomain, "wp-domain", "", "Domena WP (np. https://mojastrona.pl)")
+	rootCmd.Flags().StringVar(&appConfig.WpUser, "wp-user", "", "Użytkownik WP")
+	rootCmd.Flags().StringVar(&appConfig.WpPassword, "wp-secret", "", "Hasło Aplikacji WP w formacie XXXX XXXX XXXX XXXX XXXX XXXX")
 }
 
 func Execute() {
@@ -97,6 +123,24 @@ func runWizard() {
 	if err != nil {
 		fmt.Println(err.Error())
 		os.Exit(1)
+	}
+	survey.AskOne(&survey.Confirm{
+		Message: "Czy chcesz wysłać pliki do WordPressa?",
+		Default: false,
+	}, &appConfig.Upload)
+	if appConfig.Upload {
+		survey.AskOne(&survey.Input{
+			Message: "Podaj domenę WP (z https://):",
+		}, &appConfig.WpDomain, survey.WithValidator(survey.Required))
+
+		survey.AskOne(&survey.Input{
+			Message: "Użytkownik WP:",
+			Default: "admin",
+		}, &appConfig.WpUser, survey.WithValidator(survey.Required))
+
+		survey.AskOne(&survey.Password{
+			Message: "Hasło Aplikacji (Application Password) w formacie XXXX XXXX XXXX XXXX XXXX XXXX:",
+		}, &appConfig.WpPassword, survey.WithValidator(survey.Required))
 	}
 }
 
