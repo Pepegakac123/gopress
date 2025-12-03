@@ -1,6 +1,6 @@
 # Binaries
 gopress.exe
-
+bin/
 # Local data / Temp
 tmp_data/
 playground/
