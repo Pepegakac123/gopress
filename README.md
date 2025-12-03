@@ -41,15 +41,20 @@ Download the latest `gopress.exe` from the Releases page. No installation requir
 > Click **"More Info"** -> **"Run Anyway"**. The code is open-source and safe.
 
 ### Option 2: Build from Source (For Developers)
-Requirements: Go 1.21+
+Requirements:
+* **Go 1.25+**
+* **Zig** (Required for cross-compiling CGO dependencies like HEIC support)
 
 ```bash
 # Clone the repository
 git clone [https://github.com/your-username/gopress.git](https://github.com/your-username/gopress.git)
 cd gopress
 
-# Build via Makefile (Cross-platform)
-make windows  # Creates bin/gopress.exe
+# Install Zig (Fedora example)
+# sudo dnf install zig
+
+# Build via Makefile (Cross-platform using Zig cc)
+make windows  # Creates bin/gopress.exe (Windows x64 with HEIC support)
 make linux    # Creates bin/gopress-linux
 make mac      # Creates bin/gopress-mac
 ````
@@ -137,3 +142,4 @@ Distributed under the MIT License. See `LICENSE` for more information.
 -----
 
 *Built with ❤️ in Go.*
+
