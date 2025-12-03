@@ -14,8 +14,8 @@ import (
 	"github.com/AlecAivazis/survey/v2/terminal"
 	"github.com/Pepegakac123/gopress/internal/processor"
 	"github.com/Pepegakac123/gopress/internal/scanner"
+	"github.com/Pepegakac123/gopress/internal/uploader"
 	"github.com/Pepegakac123/gopress/internal/wordpress"
-	"github.com/schollz/progressbar/v3"
 	"github.com/spf13/cobra"
 )
 
@@ -35,10 +35,10 @@ type Config struct {
 var appConfig Config
 
 var rootCmd = &cobra.Command{
-	Use:   "gopress [input-dir]",
-	Short: "A tool for optimalizationa and publishing images to the wordpress",
-	Long: `GoPress is a CLI tool written in Golang. It allows user to convert large number of variety of images type to the webp format with optimalization options that make them
-	efficient for web usage. The tool provides a simple and intuitive interface for users to easily convert their images to the webp format, while also providing advanced options for fine-tuning the conversion process.`,
+	Use:   "gopress [folder-ze-zdjeciami]", // Bardziej jasne niż [input-dir]
+	Short: "Automat do zmniejszania zdjęć i wysyłania na WordPressa",
+	Long: `GoPress to Twój asystent do zadań specjalnych.
+	Bierze cały folder zdjęć (JPG, PNG, a nawet HEIC z iPhone'a), automatycznie przerabia je na szybki format WebP, zmniejsza do odpowiedniego rozmiaru i wysyła na stronę internetową.`,
 	PreRunE: func(cmd *cobra.Command, args []string) error {
 
 		if appConfig.Quality < 0 || appConfig.Quality > 100 {
@@ -62,13 +62,13 @@ var rootCmd = &cobra.Command{
 			if appConfig.OutputDir == "" {
 				appConfig.OutputDir = filepath.Join(appConfig.InputDir, "webp")
 			}
-			fmt.Println("Silent mode")
+			fmt.Println("Tryb cichy: Używam ustawień startowych.")
 		}
 
 		var wpClient *wordpress.Client
 		if appConfig.Upload {
 			if appConfig.WpDomain == "" || appConfig.WpUser == "" || appConfig.WpPassword == "" {
-				log.Fatal("❌ Błąd: Tryb --upload wymaga podania --wp-domain, --wp-user i --wp-secret")
+				log.Fatal("❌ Błąd: Tryb --upload wymaga podania --wp-domain, --wp-user i --wp-secret. Uruchom program bez parametrów, aby włączyć kreatora.")
 			}
 			fmt.Println("\n Łączenie z WordPress...")
 			wpClient = wordpress.NewClient(appConfig.WpDomain, appConfig.WpUser, appConfig.WpPassword, appConfig.FileBirdToken)
@@ -106,60 +106,35 @@ var rootCmd = &cobra.Command{
 		fmt.Printf("💾 Rozmiar po:          %s\n", formatBytes(finalSize))
 		fmt.Printf("📉 Oszczędność:         %.2f%%\n", savings)
 		fmt.Printf("📂 Folder wynikowy:     %s\n", appConfig.OutputDir)
-		if appConfig.Upload && len(files) > 0 {
-			fmt.Println("Wysyłanie plików do wordpressa")
-			var folderMgr *wordpress.FolderManager
-			if appConfig.FileBirdToken != "" {
-				fmt.Println("📂 Obsługa folderów FileBird: AKTYWNA")
-				// 0 to domyślny rootID
-				folderMgr = wordpress.NewFolderManager(wpClient, 0)
-			}
-			bar := progressbar.Default(int64(len(convertedFiles)))
-			var uploadErrors int
-			for _, filePath := range convertedFiles {
-				bar.Add(1)
-				resp, err := wpClient.UploadFile(filePath)
-				if err != nil {
-					uploadErrors++
-					continue
-				}
-
-				if folderMgr != nil {
-					// np. filePath: "out/2024/lato/foto.webp", OutputDir: "out" -> "2024/lato/foto.webp"
-					relPath, err := filepath.Rel(appConfig.OutputDir, filePath)
-					if err == nil {
-						dirName := filepath.Dir(relPath)
-						// Manager znajduje lub tworzy folder w FileBird
-						folderID, err := folderMgr.GetFolderID(dirName)
-
-						// Jeśli mamy ID folderu i ID pliku -> łączymy je
-						if err == nil && folderID > 0 {
-							wpClient.SetAttachmentFolder(folderID, []int{resp.ID})
-						}
-					}
-				}
-			}
-			fmt.Println("\n")
-			if uploadErrors > 0 {
-				fmt.Printf("⚠️  Zakończono z błędami uploadu: %d\n", uploadErrors)
-			} else {
-				fmt.Println("🎉 Sukces! Wszystkie pliki wysłane.")
-			}
+		if appConfig.Upload && len(convertedFiles) > 0 {
+			prepareFileBirdToken(wpClient)
+			useFileBird := appConfig.FileBirdToken != ""
+			uploader.Run(ctx, wpClient, convertedFiles, appConfig.OutputDir, useFileBird, 0)
 		}
 	},
 }
 
 func init() {
-	rootCmd.Flags().StringVarP(&appConfig.InputDir, "input", "i", "", "Ścieżka do folderu z obrazami")
-	rootCmd.Flags().StringVarP(&appConfig.OutputDir, "output", "o", "", "Ścieżka gdzie zapisać wyniki")
-	rootCmd.Flags().BoolVar(&appConfig.Upload, "upload", false, "Włącz wysyłanie na WP")
-	rootCmd.Flags().StringVar(&appConfig.WpDomain, "wp-domain", "", "Domena WP (np. https://mojastrona.pl)")
-	rootCmd.Flags().StringVar(&appConfig.WpUser, "wp-user", "", "Użytkownik WP")
-	rootCmd.Flags().StringVar(&appConfig.WpPassword, "wp-secret", "", "Hasło Aplikacji WP w formacie XXXX XXXX XXXX XXXX XXXX XXXX")
-	rootCmd.Flags().IntVarP(&appConfig.Quality, "quality", "q", 80, "Jakość pliku WebP (0-100)")
-	rootCmd.Flags().IntVarP(&appConfig.MaxWidth, "width", "w", 2560, "Maksymalna szerokość (downscale only)")
-	rootCmd.Flags().BoolVarP(&appConfig.DeleteOriginals, "delete", "d", false, "Usuń pliki źródłowe po poprawnej konwersji (UWAGA: Nieodwracalne!)")
-	rootCmd.Flags().StringVar(&appConfig.FileBirdToken, "fb-token", "", "Token API FileBird (do obsługi folderów)")
+	// Input/Output
+	rootCmd.Flags().StringVarP(&appConfig.InputDir, "input", "i", "", "Ścieżka do folderu ze zdjęciami (możesz też przeciągnąć folder na okno)")
+	rootCmd.Flags().StringVarP(&appConfig.OutputDir, "output", "o", "", "Gdzie zapisać gotowe pliki (domyślnie tworzy folder 'webp' w środku)")
+
+	// Upload
+	rootCmd.Flags().BoolVar(&appConfig.Upload, "upload", false, "Wyślij gotowe pliki na serwer WordPress")
+
+	// WP Config
+	rootCmd.Flags().StringVar(&appConfig.WpDomain, "wp-domain", "", "Adres strony (np. https://mojastrona.pl)")
+	rootCmd.Flags().StringVar(&appConfig.WpUser, "wp-user", "", "Twój login do WordPressa")
+	// hasło WP
+	rootCmd.Flags().StringVar(&appConfig.WpPassword, "wp-secret", "", "Hasło Aplikacji (NIE twoje hasło do logowania!). Wygeneruj w: Użytkownicy -> Profil")
+	// Jakość
+	rootCmd.Flags().IntVarP(&appConfig.Quality, "quality", "q", 80, "Jakość obrazu (0-100). 80 to złoty środek.")
+	// Wymiary
+	rootCmd.Flags().IntVarP(&appConfig.MaxWidth, "width", "w", 2560, "Maksymalna szerokość w px (program pomniejszy duże zdjęcia, ale nie powiększy małych)")
+	// Delete - Zostawmy to mocne ostrzeżenie
+	rootCmd.Flags().BoolVarP(&appConfig.DeleteOriginals, "delete", "d", false, "USUŃ oryginały po konwersji (Ostrożnie! Tej operacji nie da się cofnąć)")
+	// FileBird
+	rootCmd.Flags().StringVar(&appConfig.FileBirdToken, "fb-token", "", "Token FileBird (jeśli chcesz zachować strukturę folderów) i strona używa wtyczki FileBird")
 }
 
 func Execute() {
@@ -236,9 +211,10 @@ func runWizard() {
 		handleSurveyErr(err)
 
 		err = survey.AskOne(&survey.Password{
-			Message: "Hasło Aplikacji (Application Password):",
+			Message: "Hasło Aplikacji (Application Password): ",
 		}, &appConfig.WpPassword, survey.WithValidator(survey.Required))
 		handleSurveyErr(err)
+
 		err = survey.AskOne(&survey.Password{
 			Message: "Token API FileBird (FileBird -> Narzędzia -> Wygeneruj API) - Jeśli nie korzystasz z FileBird, zostaw puste.",
 		}, &appConfig.FileBirdToken)
@@ -280,5 +256,36 @@ func validateRange(min, max int) survey.Validator {
 			return fmt.Errorf("wartość musi być pomiędzy %d a %d", min, max)
 		}
 		return nil
+	}
+}
+func prepareFileBirdToken(client *wordpress.Client) {
+	if appConfig.FileBirdToken == "" {
+		return
+	}
+
+	fmt.Print("📂 Weryfikacja tokenu FileBird... ")
+	if err := client.CheckFileBirdConnection(); err != nil {
+		fmt.Printf("\n❌ BŁĄD weryfikacji tokenu: %v\n", err)
+
+		var continueWithoutFolders bool
+		prompt := &survey.Confirm{
+			Message: "Token FileBird jest nieprawidłowy. Czy chcesz kontynuować upload BEZ obsługi folderów (płasko)?",
+			Default: false,
+		}
+
+		if err := survey.AskOne(prompt, &continueWithoutFolders); err != nil {
+			fmt.Println("\n🛑 Operacja anulowana.")
+			os.Exit(0)
+		}
+
+		if !continueWithoutFolders {
+			fmt.Println("🛑 Anulowano. Popraw token i spróbuj ponownie.")
+			os.Exit(0)
+		}
+
+		fmt.Println("⚠️  Zrozumiałem. Kontynuuję upload w trybie płaskim.")
+		appConfig.FileBirdToken = ""
+	} else {
+		fmt.Println("✅ OK")
 	}
 }

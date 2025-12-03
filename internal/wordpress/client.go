@@ -52,3 +52,29 @@ func (c *Client) CheckConnection() error {
 	}
 	return nil
 }
+
+// CheckFileBirdConnection sprawdza, czy token Bearer jest poprawny.
+func (c *Client) CheckFileBirdConnection() error {
+	if c.bearerToken == "" {
+		return fmt.Errorf("brak tokenu")
+	}
+	endpoint := fmt.Sprintf("%s/filebird/public/v1/folders", c.baseURL)
+
+	req, err := http.NewRequest("GET", endpoint, nil)
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", c.bearerToken))
+
+	resp, err := c.http.Do(req)
+	if err != nil {
+		return fmt.Errorf("błąd sieci: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("nieprawidłowy token (kod %d)", resp.StatusCode)
+	}
+
+	return nil
+}

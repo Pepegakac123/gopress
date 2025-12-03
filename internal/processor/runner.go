@@ -51,7 +51,7 @@ func RunWorkerPool(ctx context.Context, files []string, inputRoot string, output
 	var mu sync.Mutex
 	totalFiles := len(files)
 	numWorkers := runtime.NumCPU()
-	fmt.Printf("🚀 Rozpoczynam przetwarzanie %d plików (tryb: Worker Pool)...\n", totalFiles)
+	fmt.Printf("🚀 Rozpoczynam przetwarzanie %d plików (Pełna moc procesora)...\n", totalFiles)
 
 	bar := progressbar.Default(int64(totalFiles))
 
