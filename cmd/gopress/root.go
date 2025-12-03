@@ -1,10 +1,13 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
+	"os/signal"
 	"path/filepath"
+	"syscall"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/Pepegakac123/gopress/internal/processor"
@@ -31,6 +34,8 @@ var rootCmd = &cobra.Command{
 	Long: `GoPress is a CLI tool written in Golang. It allows user to convert large number of variety of images type to the webp format with optimalization options that make them
 	efficient for web usage. The tool provides a simple and intuitive interface for users to easily convert their images to the webp format, while also providing advanced options for fine-tuning the conversion process.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+		defer stop()
 		if appConfig.InputDir == "" && len(args) > 0 {
 			appConfig.InputDir = args[0]
 		}
@@ -71,7 +76,7 @@ var rootCmd = &cobra.Command{
 		if _, err := os.Stat(appConfig.OutputDir); os.IsNotExist(err) {
 			os.MkdirAll(appConfig.OutputDir, 0755)
 		}
-		finalSize, convertedFiles := processor.RunWorkerPool(files, appConfig.OutputDir)
+		finalSize, convertedFiles := processor.RunWorkerPool(ctx, files, appConfig.OutputDir)
 
 		var savings float64
 		if initialSize > 0 {

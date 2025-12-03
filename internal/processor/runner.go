@@ -1,6 +1,7 @@
 package processor
 
 import (
+	"context"
 	"fmt"
 	"runtime"
 	"sync"
@@ -41,7 +42,7 @@ import (
 
 // RunWorkerPool to bezpieczna wersja przetwarzania równoległego.
 // Zwraca łączny rozmiar przetworzonych plików (w bajtach).
-func RunWorkerPool(files []string, outputDir string) (int64, []string) {
+func RunWorkerPool(ctx context.Context, files []string, outputDir string) (int64, []string) {
 	start := time.Now()
 	var totalSize int64
 	var convertedFiles []string
@@ -56,43 +57,70 @@ func RunWorkerPool(files []string, outputDir string) (int64, []string) {
 	results := make(chan error, totalFiles)
 
 	var wg sync.WaitGroup
-	for i := 0; i < numWorkers; i++ {
+	for i := range numWorkers {
 		wg.Add(1)
-		go worker(i, jobs, results, outputDir, &wg, &totalSize, &convertedFiles, &mu)
+		go worker(ctx, i, jobs, results, outputDir, &wg, &totalSize, &convertedFiles, &mu)
 	}
-	for _, file := range files {
-		jobs <- file
-	}
-	close(jobs)
+	go func() {
+		for _, file := range files {
+			select {
+			case <-ctx.Done():
+				close(jobs)
+				return
+			case jobs <- file:
+			}
+		}
+		close(jobs)
+	}()
 
 	var errorCount int
-	for i := 0; i < totalFiles; i++ {
-		err := <-results
-		bar.Add(1)
-		if err != nil {
-			errorCount++
+	done := make(chan bool)
+	go func() {
+		for err := range results {
+			bar.Add(1)
+			if err != nil {
+				errorCount++
+			}
 		}
-	}
+		done <- true
+	}()
 	wg.Wait()
+	close(results)
+	<-done
 	fmt.Printf("\n\n🏁 Zakończono w %s\n", time.Since(start).Round(time.Millisecond))
+	if ctx.Err() == context.Canceled {
+		fmt.Println("\n Operacja anulowana przez użytkownika!")
+	} else {
+		fmt.Printf("\n\nZakończono w %s\n", time.Since(start).Round(time.Millisecond))
+	}
+
 	if errorCount > 0 {
-		fmt.Printf("⚠️  Liczba błędów: %d\n", errorCount)
+		fmt.Printf("⚠️ Liczba błędów konwersji: %d\n", errorCount)
 	}
 	return atomic.LoadInt64(&totalSize), convertedFiles
 }
 
 // worker wykonuje zadania z kanału jobs
-func worker(id int, jobs <-chan string, results chan<- error, outputDir string, wg *sync.WaitGroup, totalSize *int64, convertedFiles *[]string, mu *sync.Mutex) {
+func worker(ctx context.Context, id int, jobs <-chan string, results chan<- error, outputDir string, wg *sync.WaitGroup, totalSize *int64, convertedFiles *[]string, mu *sync.Mutex) {
 	defer wg.Done()
 
-	for filepath := range jobs {
-		size, outPath, err := ConvertFile(filepath, outputDir)
-		if err == nil {
-			mu.Lock()
-			*convertedFiles = append(*convertedFiles, outPath)
-			defer mu.Unlock()
-			atomic.AddInt64(totalSize, int64(size))
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case filePath, ok := <-jobs:
+			if !ok {
+				return
+			}
+			size, outPath, err := ConvertFile(filePath, outputDir)
+
+			if err == nil {
+				mu.Lock()
+				*convertedFiles = append(*convertedFiles, outPath)
+				mu.Unlock()
+				atomic.AddInt64(totalSize, int64(size))
+			}
+			results <- err
 		}
-		results <- err
 	}
 }
