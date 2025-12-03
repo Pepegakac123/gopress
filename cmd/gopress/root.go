@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strconv"
 	"syscall"
 
 	"github.com/AlecAivazis/survey/v2"
@@ -24,6 +25,8 @@ type Config struct {
 	WpDomain   string
 	WpUser     string
 	WpPassword string
+	Quality    int
+	MaxWidth   int
 }
 
 var appConfig Config
@@ -33,6 +36,17 @@ var rootCmd = &cobra.Command{
 	Short: "A tool for optimalizationa and publishing images to the wordpress",
 	Long: `GoPress is a CLI tool written in Golang. It allows user to convert large number of variety of images type to the webp format with optimalization options that make them
 	efficient for web usage. The tool provides a simple and intuitive interface for users to easily convert their images to the webp format, while also providing advanced options for fine-tuning the conversion process.`,
+	PreRunE: func(cmd *cobra.Command, args []string) error {
+
+		if appConfig.Quality < 0 || appConfig.Quality > 100 {
+			return fmt.Errorf("nieprawidłowa jakość (%d). Podaj wartość między 0 a 100", appConfig.Quality)
+		}
+		if appConfig.MaxWidth <= 10 {
+			return fmt.Errorf("szerokość (%d) jest zbyt mała. Podaj wartość większą niż 10", appConfig.MaxWidth)
+		}
+
+		return nil
+	},
 	Run: func(cmd *cobra.Command, args []string) {
 		ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 		defer stop()
@@ -73,10 +87,11 @@ var rootCmd = &cobra.Command{
 		}
 
 		fmt.Printf("✅ Znaleziono %d obrazów do przetworzenia.\n", len(files))
+		fmt.Printf("⚙️  Parametry: Jakość %d%%, Max Szerokość %dpx\n", appConfig.Quality, appConfig.MaxWidth)
 		if _, err := os.Stat(appConfig.OutputDir); os.IsNotExist(err) {
 			os.MkdirAll(appConfig.OutputDir, 0755)
 		}
-		finalSize, convertedFiles := processor.RunWorkerPool(ctx, files, appConfig.OutputDir)
+		finalSize, convertedFiles := processor.RunWorkerPool(ctx, files, appConfig.InputDir, appConfig.OutputDir, appConfig.Quality, appConfig.MaxWidth)
 
 		var savings float64
 		if initialSize > 0 {
@@ -116,6 +131,8 @@ func init() {
 	rootCmd.Flags().StringVar(&appConfig.WpDomain, "wp-domain", "", "Domena WP (np. https://mojastrona.pl)")
 	rootCmd.Flags().StringVar(&appConfig.WpUser, "wp-user", "", "Użytkownik WP")
 	rootCmd.Flags().StringVar(&appConfig.WpPassword, "wp-secret", "", "Hasło Aplikacji WP w formacie XXXX XXXX XXXX XXXX XXXX XXXX")
+	rootCmd.Flags().IntVarP(&appConfig.Quality, "quality", "q", 80, "Jakość pliku WebP (0-100)")
+	rootCmd.Flags().IntVarP(&appConfig.MaxWidth, "width", "w", 2560, "Maksymalna szerokość (downscale only)")
 }
 
 func Execute() {
@@ -146,6 +163,15 @@ func runWizard() {
 		fmt.Println(err.Error())
 		os.Exit(1)
 	}
+	survey.AskOne(&survey.Input{
+		Message: "Jakość obrazu WebP (0-100):",
+		Default: "80",
+	}, &appConfig.Quality, survey.WithValidator(validateRange(0, 100)))
+
+	survey.AskOne(&survey.Input{
+		Message: "Maksymalna szerokość (px):",
+		Default: "2560",
+	}, &appConfig.MaxWidth, survey.WithValidator(validateRange(10, 10000)))
 	survey.AskOne(&survey.Confirm{
 		Message: "Czy chcesz wysłać pliki do WordPressa?",
 		Default: false,
@@ -177,4 +203,22 @@ func formatBytes(size int64) string {
 		exp++
 	}
 	return fmt.Sprintf("%.2f %cB", float64(size)/float64(div), "KMGTPE"[exp])
+}
+func validateRange(min, max int) survey.Validator {
+	return func(val interface{}) error {
+		str, ok := val.(string)
+		if !ok {
+			return fmt.Errorf("nieprawidłowy typ danych")
+		}
+
+		num, err := strconv.Atoi(str)
+		if err != nil {
+			return fmt.Errorf("to nie jest liczba")
+		}
+
+		if num < min || num > max {
+			return fmt.Errorf("wartość musi być pomiędzy %d a %d", min, max)
+		}
+		return nil
+	}
 }

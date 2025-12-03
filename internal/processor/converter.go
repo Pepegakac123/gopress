@@ -18,7 +18,7 @@ import (
 
 // ConvertFile bierze plik wejściowy, zmienia rozmiar i zapisuje jako WebP w outputDir.
 // To jest funkcja SYNCHRONICZNA (blokująca).
-func ConvertFile(inputPath string, outputDir string) (int64, string, error) {
+func ConvertFile(inputPath string, outputDir string, quality int, maxWidth int) (int64, string, error) {
 	file, err := os.Open(inputPath)
 	if err != nil {
 		return 0, "", fmt.Errorf("nie udało się otworzyć pliku: %w", err)
@@ -42,9 +42,8 @@ func ConvertFile(inputPath string, outputDir string) (int64, string, error) {
 	}
 	var dst image.Image
 
-	if src.Bounds().Dx() > 2560 {
-		// Jest za duży -> Skalujemy w dół do 2560px
-		dst = imaging.Resize(src, 2560, 0, imaging.Lanczos)
+	if src.Bounds().Dx() > maxWidth {
+		dst = imaging.Resize(src, maxWidth, 0, imaging.Lanczos)
 	} else {
 		dst = src
 	}
@@ -65,7 +64,7 @@ func ConvertFile(inputPath string, outputDir string) (int64, string, error) {
 
 	err = webp.Encode(outFile, imgRGBA, &webp.Options{
 		Lossless: false,
-		Quality:  80,
+		Quality:  float32(quality),
 	})
 	if err != nil {
 		os.Remove(outPath)

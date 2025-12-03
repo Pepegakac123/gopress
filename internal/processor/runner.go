@@ -3,6 +3,8 @@ package processor
 import (
 	"context"
 	"fmt"
+	"os"
+	"path/filepath"
 	"runtime"
 	"sync"
 	"sync/atomic"
@@ -42,7 +44,7 @@ import (
 
 // RunWorkerPool to bezpieczna wersja przetwarzania równoległego.
 // Zwraca łączny rozmiar przetworzonych plików (w bajtach).
-func RunWorkerPool(ctx context.Context, files []string, outputDir string) (int64, []string) {
+func RunWorkerPool(ctx context.Context, files []string, inputRoot string, outputRoot string, quality int, maxWidth int) (int64, []string) {
 	start := time.Now()
 	var totalSize int64
 	var convertedFiles []string
@@ -59,7 +61,7 @@ func RunWorkerPool(ctx context.Context, files []string, outputDir string) (int64
 	var wg sync.WaitGroup
 	for i := range numWorkers {
 		wg.Add(1)
-		go worker(ctx, i, jobs, results, outputDir, &wg, &totalSize, &convertedFiles, &mu)
+		go worker(ctx, i, jobs, results, inputRoot, outputRoot, quality, maxWidth, &wg, &totalSize, &convertedFiles, &mu)
 	}
 	go func() {
 		for _, file := range files {
@@ -101,7 +103,7 @@ func RunWorkerPool(ctx context.Context, files []string, outputDir string) (int64
 }
 
 // worker wykonuje zadania z kanału jobs
-func worker(ctx context.Context, id int, jobs <-chan string, results chan<- error, outputDir string, wg *sync.WaitGroup, totalSize *int64, convertedFiles *[]string, mu *sync.Mutex) {
+func worker(ctx context.Context, id int, jobs <-chan string, results chan<- error, inputRoot, outputRoot string, quality, maxWidth int, wg *sync.WaitGroup, totalSize *int64, convertedFiles *[]string, mu *sync.Mutex) {
 	defer wg.Done()
 
 	for {
@@ -112,7 +114,17 @@ func worker(ctx context.Context, id int, jobs <-chan string, results chan<- erro
 			if !ok {
 				return
 			}
-			size, outPath, err := ConvertFile(filePath, outputDir)
+			relPath, err := filepath.Rel(inputRoot, filePath)
+			if err != nil {
+				relPath = filepath.Base(filePath)
+			}
+			targetDir := filepath.Join(outputRoot, filepath.Dir(relPath))
+
+			if err := os.MkdirAll(targetDir, 0755); err != nil {
+				results <- fmt.Errorf("błąd tworzenia katalogu %s: %w", targetDir, err)
+				continue
+			}
+			size, outPath, err := ConvertFile(filePath, targetDir, quality, maxWidth)
 
 			if err == nil {
 				mu.Lock()
