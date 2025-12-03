@@ -44,7 +44,7 @@ import (
 
 // RunWorkerPool to bezpieczna wersja przetwarzania równoległego.
 // Zwraca łączny rozmiar przetworzonych plików (w bajtach).
-func RunWorkerPool(ctx context.Context, files []string, inputRoot string, outputRoot string, quality int, maxWidth int) (int64, []string) {
+func RunWorkerPool(ctx context.Context, files []string, inputRoot string, outputRoot string, quality, maxWidth int, deleteOriginals bool) (int64, []string) {
 	start := time.Now()
 	var totalSize int64
 	var convertedFiles []string
@@ -61,7 +61,8 @@ func RunWorkerPool(ctx context.Context, files []string, inputRoot string, output
 	var wg sync.WaitGroup
 	for i := range numWorkers {
 		wg.Add(1)
-		go worker(ctx, i, jobs, results, inputRoot, outputRoot, quality, maxWidth, &wg, &totalSize, &convertedFiles, &mu)
+		go worker(ctx, i, jobs, results, inputRoot, outputRoot, quality, maxWidth, deleteOriginals, &wg, &totalSize, &convertedFiles, &mu)
+
 	}
 	go func() {
 		for _, file := range files {
@@ -103,7 +104,7 @@ func RunWorkerPool(ctx context.Context, files []string, inputRoot string, output
 }
 
 // worker wykonuje zadania z kanału jobs
-func worker(ctx context.Context, id int, jobs <-chan string, results chan<- error, inputRoot, outputRoot string, quality, maxWidth int, wg *sync.WaitGroup, totalSize *int64, convertedFiles *[]string, mu *sync.Mutex) {
+func worker(ctx context.Context, id int, jobs <-chan string, results chan<- error, inputRoot, outputRoot string, quality, maxWidth int, deleteOriginals bool, wg *sync.WaitGroup, totalSize *int64, convertedFiles *[]string, mu *sync.Mutex) {
 	defer wg.Done()
 
 	for {
@@ -131,6 +132,14 @@ func worker(ctx context.Context, id int, jobs <-chan string, results chan<- erro
 				*convertedFiles = append(*convertedFiles, outPath)
 				mu.Unlock()
 				atomic.AddInt64(totalSize, int64(size))
+				if deleteOriginals {
+					if rmErr := os.Remove(filePath); rmErr != nil {
+						results <- fmt.Errorf("skonwertowano, ale błąd usuwania źródła %s: %w", filePath, rmErr)
+						continue
+					}
+					dir := filepath.Dir(filePath)
+					_ = os.Remove(dir)
+				}
 			}
 			results <- err
 		}

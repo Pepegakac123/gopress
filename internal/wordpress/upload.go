@@ -38,7 +38,7 @@ func (c *Client) UploadFile(filePath string) (*MediaResponse, error) {
 		return nil, fmt.Errorf("Nie można zamknąć formularza: %w", err)
 	}
 
-	endpoint := fmt.Sprintf("%s/media", c.baseURL)
+	endpoint := fmt.Sprintf("%s/wp/v2/media", c.baseURL)
 	req, err := http.NewRequest("POST", endpoint, body)
 	if err != nil {
 		return nil, err

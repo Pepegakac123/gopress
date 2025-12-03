@@ -3,24 +3,29 @@ package wordpress
 import (
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 )
 
 // Client to instancja połączenia z WP.
 type Client struct {
-	baseURL  string
-	username string
-	password string
-	http     *http.Client
+	baseURL     string
+	username    string
+	password    string
+	bearerToken string
+	http        *http.Client
 }
 
 // NewClient to konstruktor
-func NewClient(domain, user, password string) *Client {
-	apiURL := fmt.Sprintf("%s/wp-json/wp/v2", domain)
+func NewClient(domain, user, password, bearerToken string) *Client {
+	domain = strings.TrimSuffix(domain, "/")
+	domain = strings.TrimSuffix(domain, "/wp-json")
+	apiURL := fmt.Sprintf("%s/wp-json", domain)
 	return &Client{
-		baseURL:  apiURL,
-		username: user,
-		password: password,
+		baseURL:     apiURL,
+		username:    user,
+		password:    password,
+		bearerToken: bearerToken,
 		http: &http.Client{
 			Timeout: time.Second * 30,
 		},
@@ -30,7 +35,7 @@ func NewClient(domain, user, password string) *Client {
 // CheckConnection sprawdza, czy dane logowania są poprawne.
 // Uderza w endpoint /users/me, który wymaga autoryzacji.
 func (c *Client) CheckConnection() error {
-	endpoint := fmt.Sprintf("%s/users/me", c.baseURL)
+	endpoint := fmt.Sprintf("%s/wp/v2/users/me", c.baseURL)
 
 	req, err := http.NewRequest("GET", endpoint, nil)
 	if err != nil {

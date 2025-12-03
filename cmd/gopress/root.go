@@ -11,6 +11,7 @@ import (
 	"syscall"
 
 	"github.com/AlecAivazis/survey/v2"
+	"github.com/AlecAivazis/survey/v2/terminal"
 	"github.com/Pepegakac123/gopress/internal/processor"
 	"github.com/Pepegakac123/gopress/internal/scanner"
 	"github.com/Pepegakac123/gopress/internal/wordpress"
@@ -19,14 +20,16 @@ import (
 )
 
 type Config struct {
-	InputDir   string
-	OutputDir  string
-	Upload     bool
-	WpDomain   string
-	WpUser     string
-	WpPassword string
-	Quality    int
-	MaxWidth   int
+	InputDir        string
+	OutputDir       string
+	Upload          bool
+	WpDomain        string
+	WpUser          string
+	WpPassword      string
+	FileBirdToken   string
+	Quality         int
+	MaxWidth        int
+	DeleteOriginals bool
 }
 
 var appConfig Config
@@ -68,7 +71,7 @@ var rootCmd = &cobra.Command{
 				log.Fatal("❌ Błąd: Tryb --upload wymaga podania --wp-domain, --wp-user i --wp-secret")
 			}
 			fmt.Println("\n Łączenie z WordPress...")
-			wpClient = wordpress.NewClient(appConfig.WpDomain, appConfig.WpUser, appConfig.WpPassword)
+			wpClient = wordpress.NewClient(appConfig.WpDomain, appConfig.WpUser, appConfig.WpPassword, appConfig.FileBirdToken)
 			if err := wpClient.CheckConnection(); err != nil {
 				log.Fatalf("Błąd połączenia z WP: %v", err)
 			}
@@ -91,7 +94,7 @@ var rootCmd = &cobra.Command{
 		if _, err := os.Stat(appConfig.OutputDir); os.IsNotExist(err) {
 			os.MkdirAll(appConfig.OutputDir, 0755)
 		}
-		finalSize, convertedFiles := processor.RunWorkerPool(ctx, files, appConfig.InputDir, appConfig.OutputDir, appConfig.Quality, appConfig.MaxWidth)
+		finalSize, convertedFiles := processor.RunWorkerPool(ctx, files, appConfig.InputDir, appConfig.OutputDir, appConfig.Quality, appConfig.MaxWidth, appConfig.DeleteOriginals)
 
 		var savings float64
 		if initialSize > 0 {
@@ -105,13 +108,35 @@ var rootCmd = &cobra.Command{
 		fmt.Printf("📂 Folder wynikowy:     %s\n", appConfig.OutputDir)
 		if appConfig.Upload && len(files) > 0 {
 			fmt.Println("Wysyłanie plików do wordpressa")
+			var folderMgr *wordpress.FolderManager
+			if appConfig.FileBirdToken != "" {
+				fmt.Println("📂 Obsługa folderów FileBird: AKTYWNA")
+				// 0 to domyślny rootID
+				folderMgr = wordpress.NewFolderManager(wpClient, 0)
+			}
 			bar := progressbar.Default(int64(len(convertedFiles)))
 			var uploadErrors int
 			for _, filePath := range convertedFiles {
 				bar.Add(1)
-				_, err := wpClient.UploadFile(filePath)
+				resp, err := wpClient.UploadFile(filePath)
 				if err != nil {
 					uploadErrors++
+					continue
+				}
+
+				if folderMgr != nil {
+					// np. filePath: "out/2024/lato/foto.webp", OutputDir: "out" -> "2024/lato/foto.webp"
+					relPath, err := filepath.Rel(appConfig.OutputDir, filePath)
+					if err == nil {
+						dirName := filepath.Dir(relPath)
+						// Manager znajduje lub tworzy folder w FileBird
+						folderID, err := folderMgr.GetFolderID(dirName)
+
+						// Jeśli mamy ID folderu i ID pliku -> łączymy je
+						if err == nil && folderID > 0 {
+							wpClient.SetAttachmentFolder(folderID, []int{resp.ID})
+						}
+					}
 				}
 			}
 			fmt.Println("\n")
@@ -133,6 +158,8 @@ func init() {
 	rootCmd.Flags().StringVar(&appConfig.WpPassword, "wp-secret", "", "Hasło Aplikacji WP w formacie XXXX XXXX XXXX XXXX XXXX XXXX")
 	rootCmd.Flags().IntVarP(&appConfig.Quality, "quality", "q", 80, "Jakość pliku WebP (0-100)")
 	rootCmd.Flags().IntVarP(&appConfig.MaxWidth, "width", "w", 2560, "Maksymalna szerokość (downscale only)")
+	rootCmd.Flags().BoolVarP(&appConfig.DeleteOriginals, "delete", "d", false, "Usuń pliki źródłowe po poprawnej konwersji (UWAGA: Nieodwracalne!)")
+	rootCmd.Flags().StringVar(&appConfig.FileBirdToken, "fb-token", "", "Token API FileBird (do obsługi folderów)")
 }
 
 func Execute() {
@@ -144,52 +171,85 @@ func Execute() {
 
 func runWizard() {
 	fmt.Println("Tryb interaktywny: Nie podano flag, więc zadam kilka pytań...")
+
+	handleSurveyErr := func(err error) {
+		if err == nil {
+			return
+		}
+		if err == terminal.InterruptErr {
+			fmt.Println("\n🛑 Przerwano przez użytkownika (Ctrl+C). Do widzenia!")
+			os.Exit(0)
+		}
+		fmt.Printf("\n❌ Błąd ankiety: %v\n", err)
+		os.Exit(1)
+	}
+
 	inputPrompt := &survey.Input{
 		Message: "Gdzie są zdjęcia (folder wejściowy)?",
 		Default: "./raw",
 	}
 	err := survey.AskOne(inputPrompt, &appConfig.InputDir, survey.WithValidator(survey.Required))
-	if err != nil {
-		fmt.Println(err.Error())
-		os.Exit(1)
-	}
+	handleSurveyErr(err)
+
+	// Obliczamy domyślny output
 	defaultOut := filepath.Join(appConfig.InputDir, "webp")
+
+	// Pytanie 2: Output
 	outputPrompt := &survey.Input{
 		Message: fmt.Sprintf("Gdzie zapisać wyniki? Zostaw puste, aby użyć domyślnej lokalizacji: %s", defaultOut),
 		Default: defaultOut,
 	}
 	err = survey.AskOne(outputPrompt, &appConfig.OutputDir)
-	if err != nil {
-		fmt.Println(err.Error())
-		os.Exit(1)
-	}
-	survey.AskOne(&survey.Input{
+	handleSurveyErr(err)
+
+	// Pytanie 3: Jakość
+	err = survey.AskOne(&survey.Input{
 		Message: "Jakość obrazu WebP (0-100):",
 		Default: "80",
 	}, &appConfig.Quality, survey.WithValidator(validateRange(0, 100)))
+	handleSurveyErr(err)
 
-	survey.AskOne(&survey.Input{
+	// Pytanie 4: Szerokość
+	err = survey.AskOne(&survey.Input{
 		Message: "Maksymalna szerokość (px):",
 		Default: "2560",
 	}, &appConfig.MaxWidth, survey.WithValidator(validateRange(10, 10000)))
-	survey.AskOne(&survey.Confirm{
+	handleSurveyErr(err)
+
+	// Pytanie 5: Upload
+	err = survey.AskOne(&survey.Confirm{
 		Message: "Czy chcesz wysłać pliki do WordPressa?",
 		Default: false,
 	}, &appConfig.Upload)
+	handleSurveyErr(err)
+
 	if appConfig.Upload {
-		survey.AskOne(&survey.Input{
+		err = survey.AskOne(&survey.Input{
 			Message: "Podaj domenę WP (z https://):",
 		}, &appConfig.WpDomain, survey.WithValidator(survey.Required))
+		handleSurveyErr(err)
 
-		survey.AskOne(&survey.Input{
+		err = survey.AskOne(&survey.Input{
 			Message: "Użytkownik WP:",
 			Default: "admin",
 		}, &appConfig.WpUser, survey.WithValidator(survey.Required))
+		handleSurveyErr(err)
 
-		survey.AskOne(&survey.Password{
-			Message: "Hasło Aplikacji (Application Password) w formacie XXXX XXXX XXXX XXXX XXXX XXXX:",
+		err = survey.AskOne(&survey.Password{
+			Message: "Hasło Aplikacji (Application Password):",
 		}, &appConfig.WpPassword, survey.WithValidator(survey.Required))
+		handleSurveyErr(err)
+		err = survey.AskOne(&survey.Password{
+			Message: "Token API FileBird (FileBird -> Narzędzia -> Wygeneruj API) - Jeśli nie korzystasz z FileBird, zostaw puste.",
+		}, &appConfig.FileBirdToken)
 	}
+	// Pytania 6: Usuwanie oryginalnych plików
+	err = survey.AskOne(&survey.Confirm{
+		Message: "⚠️  Czy usunąć oryginalne pliki po konwersji?",
+		Help:    "Oryginały zostaną bezpowrotnie usunięte z dysku. Zostaną tylko pliki WebP.",
+		Default: false,
+	}, &appConfig.DeleteOriginals)
+	handleSurveyErr(err)
 }
 
 func formatBytes(size int64) string {
