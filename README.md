@@ -21,118 +21,129 @@ It recursively scans local directories, optimizes images (Smart Resize + WebP co
 * **🛑 Graceful Shutdown:** Handles `SIGINT` (Ctrl+C) signals correctly, ensuring current tasks are completed before exiting to prevent data corruption.
 * **🧙‍♂️ Interactive Wizard:** Features a user-friendly terminal UI (via `survey`) for non-technical users.
 
+## 📖 How to Use (User Guide)
+
+This section is for end-users who want to run the tool without compiling code.
+
+### 🪟 Windows
+
+1.  **Download:** Get `gopress.exe` from the latest Release.
+2.  **First Run (Security Warning):**
+    * Since this tool is built internally and not signed with a paid certificate, Windows **SmartScreen** will likely block it.
+    * Click **"More Info" (Więcej informacji)** -> **"Run Anyway" (Uruchom mimo to)**.
+    * *This only happens once.*
+
+**Option A: Interactive Mode (Easiest)**
+1.  Move `gopress.exe` to the folder containing your images (optional, but convenient).
+2.  **Double-click** `gopress.exe`.
+3.  A black terminal window will open.
+4.  Answer the questions (Input folder, WordPress URL, etc.) and press Enter.
+
+**Option B: Power User Mode (PowerShell/CMD)**
+1.  Open PowerShell/CMD in the folder where `gopress.exe` is located.
+2.  Run commands with flags:
+    ```powershell
+    .\gopress.exe -i "C:\Photos\2024" --upload
+    ```
+
+### 🍎 macOS
+
+1.  **Download:** Get the binary for your Mac (`gopress-mac-m1` for Apple Silicon or `gopress-mac-intel`).
+2.  **Permissions:** You need to make the file executable. Open Terminal, navigate to the download folder, and run:
+    ```bash
+    chmod +x gopress-mac-m1
+    ```
+3.  **Security Warning:** macOS will block apps from unidentified developers.
+    * **Right-click** the file in Finder -> Select **Open**.
+    * Click **Open** in the dialog box.
+    * *(Alternatively: Go to System Settings -> Privacy & Security -> Allow "gopress-mac..." to run).*
+
+**Running the tool:**
+You must run it via Terminal:
+```bash
+# Interactive Wizard
+./gopress-mac-m1
+
+# Silent Mode
+./gopress-mac-m1 -i "/Users/name/Pictures/Project" --upload
+````
+
+### 🐧 Linux
+
+1.  **Download:** Get `gopress-linux`.
+2.  **Permissions:**
+    ```bash
+    chmod +x gopress-linux
+    ```
+3.  **Run:**
+    ```bash
+    ./gopress-linux
+    ```
+
+-----
+
+## 💡 Examples
+
+### 1\. The "I want to be guided" approach (Wizard)
+
+Run the tool without arguments. It will ask you step-by-step:
+
+  * Where are the photos?
+  * Do you want to upload them to WordPress?
+  * (If yes) Provide domain, user, and Application Password.
+  * (Optional) Provide FileBird Token to mirror folders.
+
+### 2\. The "Quick Convert" approach
+
+Convert all images in `./raw` folder to WebP and save them in `./optimized`:
+
+```bash
+gopress -i "./raw" -o "./optimized"
+```
+
+### 3\. The "Full Automation" approach
+
+Convert, Resize (max 1920px), and Upload to WordPress preserving folder structure:
+
+```bash
+gopress -i "./photos" --upload \
+  --wp-domain "[https://mysite.com](https://mysite.com)" \
+  --wp-user "admin" \
+  --wp-secret "xxxx xxxx xxxx xxxx" \
+  --fb-token "your-filebird-api-token" \
+  --width 1920
+```
+
+-----
+
 ## 🛠️ Tech Stack & Architecture
 
 This project follows idiomatic Go patterns and the "Standard Go Project Layout":
 
-* **Language:** Go 1.25+
-* **CLI Framework:** [Cobra](https://github.com/spf13/cobra) (Commands) & [Viper](https://github.com/spf13/viper) (Config).
-* **Concurrency:** Worker Pool pattern, Channels for job distribution, `sync.WaitGroup` for synchronization, `context.Context` for cancellation propagation.
-* **Image Processing:** `disintegration/imaging` (Resizing), `chai2010/webp` (Encoding), `jdeng/goheif` (HEIC decoding).
-* **Interactive UI:** `AlecAivazis/survey` & `schollz/progressbar`.
+  * **Language:** Go 1.25+
+  * **CLI Framework:** [Cobra](https://github.com/spf13/cobra) (Commands) & [Viper](https://github.com/spf13/viper) (Config).
+  * **Concurrency:** Worker Pool pattern, Channels for job distribution, `sync.WaitGroup` for synchronization, `context.Context` for cancellation propagation.
+  * **Image Processing:** `disintegration/imaging` (Resizing), `chai2010/webp` (Encoding), `jdeng/goheif` (HEIC decoding).
+  * **Interactive UI:** `AlecAivazis/survey` & `schollz/progressbar`.
 
-## 📦 Installation
+## 📦 Building from Source (Developers)
 
-### Option 1: Download Binary (Recommended for Users)
-Download the latest `gopress.exe` from the Releases page. No installation required.
-
-> **⚠️ Note for Windows Users:**
-> Since this application is not digitally signed with a corporate certificate, Windows SmartScreen might flag it as unrecognized.
-> Click **"More Info"** -> **"Run Anyway"**. The code is open-source and safe.
-
-### Option 2: Build from Source (For Developers)
 Requirements:
-* **Go 1.25+**
-* **Zig** (Required for cross-compiling CGO dependencies like HEIC support)
+
+  * **Go 1.25+**
+  * **Zig** (Required for cross-compiling CGO dependencies like HEIC support)
+
+<!-- end list -->
 
 ```bash
 # Clone the repository
 git clone [https://github.com/your-username/gopress.git](https://github.com/your-username/gopress.git)
 cd gopress
 
-# Install Zig (Fedora example)
-# sudo dnf install zig
-
 # Build via Makefile (Cross-platform using Zig cc)
-make windows  # Creates bin/gopress.exe (Windows x64 with HEIC support)
+make windows  # Creates bin/gopress.exe
 make linux    # Creates bin/gopress-linux
 make mac      # Creates bin/gopress-mac
-````
-
-## 🚀 Usage
-
-You can use GoPress in two modes: **Interactive Wizard** or **Silent CLI**.
-
-### 1\. Interactive Mode (Wizard)
-
-Simply run the executable without arguments. The program will ask you for all necessary details (paths, credentials, settings).
-
-```bash
-./gopress.exe
-```
-
-### 2\. Silent Mode (CLI / CI/CD)
-
-Ideal for scripts and power users.
-
-```bash
-# Basic usage: Convert images in "./raw" and save to "./out"
-./gopress.exe -i "./raw" -o "./out"
-
-# Full power: Convert, Optimize, and Upload to WordPress
-./gopress.exe -i "./photos" --upload \
-  --wp-domain "[https://mysite.com](https://mysite.com)" \
-  --wp-user "admin" \
-  --wp-secret "abcd xxxx xxxx xxxx" \
-  --quality 85 \
-  --width 1920
-```
-
-### 🚩 Available Flags
-
-| Flag (PL) | Description (EN) | Default |
-| :--- | :--- | :--- |
-| `--input`, `-i` | Path to source folder with images | (Required) |
-| `--output`, `-o` | Path to save processed WebP files | `./[input]/webp` |
-| `--quality`, `-q` | WebP Quality (0-100) | `80` |
-| `--width`, `-w` | Max width in px (Downscale only) | `2560` |
-| `--upload` | Enable upload to WordPress | `false` |
-| `--delete`, `-d` | **Delete original files** after success | `false` |
-| `--fb-token` | FileBird API Token (for folder support) | `""` |
-| `--wp-domain` | WordPress URL (e.g., https://www.google.com/search?q=https://site.com) | `""` |
-| `--wp-user` | WordPress Username | `""` |
-| `--wp-secret` | WordPress Application Password | `""` |
-
-## 🔌 WordPress Integration
-
-### Application Passwords
-
-GoPress uses **Basic Auth** via WordPress Application Passwords.
-
-1.  Go to your WP Admin -\> Users -\> Profile.
-2.  Scroll down to "Application Passwords".
-3.  Name it "GoPress", create it, and copy the code. **Do not use your login password.**
-
-### FileBird Support (Folder Mirroring)
-
-To enable folder synchronization:
-
-1.  Install **FileBird** plugin (Lite or Pro) on WordPress.
-2.  Go to Settings -\> FileBird -\> API and generate a token.
-3.  Pass the token to GoPress via Wizard or `--fb-token` flag.
-
-If provided, GoPress will recreate your local directory tree inside the WordPress Media Library automatically.
-
-## 🏗️ Development
-
-To run the project locally with hot-reload or testing:
-
-```bash
-# Run directly
-go run ./cmd/gopress
-
-# Run tests
-go test ./...
 ```
 
 ## 📄 License
