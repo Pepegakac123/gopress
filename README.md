@@ -93,9 +93,8 @@ MacOS is strict. You need to allow the file to run.
 Drag the file into your Terminal and press Enter, or run:
 ```bash
 ./gopress-mac-m1
-````
-
-\</details\>
+```
+</details\>
 
 \<details\>
 \<summary\>\<strong\>🐧 Linux (Click to expand)\</strong\>\</summary\>
