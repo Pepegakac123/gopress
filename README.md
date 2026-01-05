@@ -13,6 +13,7 @@ Pobiera folder pełen surowych zdjęć (JPG, PNG, HEIC), optymalizuje je do uży
 ## ✨ Kluczowe Funkcje
 
 * **⚡ Szybkie i Wydajne:** Przetwarza wiele obrazów jednocześnie (Worker Pools), znacznie szybciej niż ręczna konwersja.
+* **📦 Obsługa ZIP:** Wrzuć spakowany folder (ZIP), a program zajmie się resztą – rozpakuje, przetworzy i posprząta.
 * **🖼️ Inteligentna Optymalizacja:**
     * Konwertuje wszystkie formaty (JPG, PNG, TIFF, **iPhone HEIC**) do **WebP**.
     * **Smart Resize:** Automatycznie zmniejsza ogromne obrazy do rozmiaru przyjaznego dla sieci (np. 1920px), ale zachowuje małe obrazy bez zmian.
@@ -27,8 +28,8 @@ Możesz kontrolować program używając tych "flag", jeśli chcesz pominąć Kre
 
 | Flaga | Opis | Domyślne zachowanie (jeśli nie ustawione) |
 | :--- | :--- | :--- |
-| `--input`, `-i` | **Folder źródłowy** zawierający obrazy. | Program zapyta przez Kreatora. |
-| `--output`, `-o` | **Gdzie zapisać** zoptymalizowane pliki WebP. | Tworzy folder **`webp`** wewnątrz folderu wejściowego. |
+| `--input`, `-i` | **Folder źródłowy** zawierający obrazy (lub plik **.zip**). | Program zapyta przez Kreatora. |
+| `--output`, `-o` | **Gdzie zapisać** zoptymalizowane pliki WebP. | Dla folderu: wewnątrz. Dla ZIP: obok pliku ZIP. |
 | `--quality`, `-q` | **Jakość obrazu** (0-100). Niższa = mniejszy rozmiar pliku. | Używa **80** (świetna równowaga jakości/rozmiaru). |
 | `--width`, `-w` | **Maksymalna szerokość** w pikselach. Obrazy szersze zostaną przeskalowane. | Używa **2560px**. (Małe obrazy NIE są powiększane). |
 | `--upload` | **Włącz przesyłanie** do WordPressa. | Tylko konwertuje pliki lokalnie. |
@@ -122,6 +123,12 @@ Po prostu kliknij dwukrotnie aplikację. Zapyta Cię:
 Konwertuj wszystkie obrazy w folderze `raw`. Ponieważ `--output` nie jest podany, automatycznie tworzy folder `raw/webp`.
 ```bash
 gopress -i "./raw"
+```
+
+**LUB użyj pliku ZIP:**
+```bash
+gopress -i "./zdjecia.zip"
+# Stworzy folder ./webp obok pliku zip
 ```
 
 ### 3. Podejście "Pełna Automatyzacja"
