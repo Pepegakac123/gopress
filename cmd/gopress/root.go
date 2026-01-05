@@ -7,8 +7,10 @@ import (
 	"io"
 	"log"
 	"os"
+	"os/exec"
 	"os/signal"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"syscall"
@@ -80,12 +82,17 @@ var rootCmd = &cobra.Command{
 			}
 		}
 
+		var shouldCleanup = true
 		if isZip {
 			tempDir, err := os.MkdirTemp("", "gopress_unzip_*")
 			if err != nil {
 				log.Fatalf("❌ Błąd tworzenia katalogu tymczasowego: %v", err)
 			}
-			defer os.RemoveAll(tempDir)
+			defer func() {
+				if shouldCleanup {
+					os.RemoveAll(tempDir)
+				}
+			}()
 
 			fmt.Printf("📦 Rozpakowywanie %s do %s...\n", originalInput, tempDir)
 			if err := unzip(originalInput, tempDir); err != nil {
@@ -139,6 +146,19 @@ var rootCmd = &cobra.Command{
 			prepareFileBirdToken(wpClient)
 			useFileBird := appConfig.FileBirdToken != ""
 			uploader.Run(ctx, wpClient, convertedFiles, appConfig.OutputDir, useFileBird, 0)
+		}
+
+		var openResult bool
+		prompt := &survey.Confirm{
+			Message: "Czy otworzyć folder z wynikami?",
+			Default: true,
+		}
+		if err := survey.AskOne(prompt, &openResult); err == nil && openResult {
+			if isZip {
+				shouldCleanup = false
+				fmt.Println("ℹ️  Tymczasowe pliki (rozpakowany ZIP) zostały zachowane, ponieważ otwierasz folder.")
+			}
+			openFolder(appConfig.OutputDir)
 		}
 	},
 }
@@ -366,4 +386,20 @@ func unzip(src, dest string) error {
 		}
 	}
 	return nil
+}
+
+func openFolder(path string) error {
+	var cmd *exec.Cmd
+
+	switch runtime.GOOS {
+	case "windows":
+		cmd = exec.Command("explorer", path)
+	case "darwin":
+		cmd = exec.Command("open", path)
+	case "linux":
+		cmd = exec.Command("xdg-open", path)
+	default:
+		return fmt.Errorf("nieobsługiwany system operacyjny: %s", runtime.GOOS)
+	}
+	return cmd.Start()
 }
