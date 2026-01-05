@@ -1,13 +1,16 @@
 package main
 
 import (
+	"archive/zip"
 	"context"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"os/signal"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"syscall"
 
 	"github.com/AlecAivazis/survey/v2"
@@ -59,10 +62,36 @@ var rootCmd = &cobra.Command{
 		if appConfig.InputDir == "" {
 			runWizard()
 		} else {
-			if appConfig.OutputDir == "" {
+			fmt.Println("Tryb cichy: Używam ustawień startowych.")
+		}
+
+		originalInput := appConfig.InputDir
+		stat, err := os.Stat(originalInput)
+		if err != nil {
+			log.Fatalf("Błąd dostępu do %s: %v", originalInput, err)
+		}
+		isZip := !stat.IsDir() && strings.ToLower(filepath.Ext(originalInput)) == ".zip"
+
+		if appConfig.OutputDir == "" {
+			if isZip {
+				appConfig.OutputDir = filepath.Join(filepath.Dir(originalInput), "webp")
+			} else {
 				appConfig.OutputDir = filepath.Join(appConfig.InputDir, "webp")
 			}
-			fmt.Println("Tryb cichy: Używam ustawień startowych.")
+		}
+
+		if isZip {
+			tempDir, err := os.MkdirTemp("", "gopress_unzip_*")
+			if err != nil {
+				log.Fatalf("❌ Błąd tworzenia katalogu tymczasowego: %v", err)
+			}
+			defer os.RemoveAll(tempDir)
+
+			fmt.Printf("📦 Rozpakowywanie %s do %s...\n", originalInput, tempDir)
+			if err := unzip(originalInput, tempDir); err != nil {
+				log.Fatalf("❌ Błąd rozpakowywania zip: %v", err)
+			}
+			appConfig.InputDir = tempDir
 		}
 
 		var wpClient *wordpress.Client
@@ -167,7 +196,12 @@ func runWizard() {
 	handleSurveyErr(err)
 
 	// Obliczamy domyślny output
-	defaultOut := filepath.Join(appConfig.InputDir, "webp")
+	var defaultOut string
+	if strings.ToLower(filepath.Ext(appConfig.InputDir)) == ".zip" {
+		defaultOut = filepath.Join(filepath.Dir(appConfig.InputDir), "webp")
+	} else {
+		defaultOut = filepath.Join(appConfig.InputDir, "webp")
+	}
 
 	// Pytanie 2: Output
 	outputPrompt := &survey.Input{
@@ -288,4 +322,48 @@ func prepareFileBirdToken(client *wordpress.Client) {
 	} else {
 		fmt.Println("✅ OK")
 	}
+}
+
+func unzip(src, dest string) error {
+	r, err := zip.OpenReader(src)
+	if err != nil {
+		return err
+	}
+	defer r.Close()
+
+	for _, f := range r.File {
+		fpath := filepath.Join(dest, f.Name)
+		if !strings.HasPrefix(fpath, filepath.Clean(dest)+string(os.PathSeparator)) {
+			return fmt.Errorf("illegal file path: %s", fpath)
+		}
+
+		if f.FileInfo().IsDir() {
+			os.MkdirAll(fpath, os.ModePerm)
+			continue
+		}
+
+		if err = os.MkdirAll(filepath.Dir(fpath), os.ModePerm); err != nil {
+			return err
+		}
+
+		outFile, err := os.OpenFile(fpath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, f.Mode())
+		if err != nil {
+			return err
+		}
+
+		rc, err := f.Open()
+		if err != nil {
+			outFile.Close()
+			return err
+		}
+
+		_, err = io.Copy(outFile, rc)
+		outFile.Close()
+		rc.Close()
+
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
