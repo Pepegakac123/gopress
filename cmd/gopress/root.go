@@ -67,6 +67,12 @@ var rootCmd = &cobra.Command{
 			fmt.Println("Tryb cichy: Używam ustawień startowych.")
 		}
 
+		// Fix for Windows Drag & Drop: remove surrounding quotes
+		appConfig.InputDir = sanitizePath(appConfig.InputDir)
+		if appConfig.OutputDir != "" {
+			appConfig.OutputDir = sanitizePath(appConfig.OutputDir)
+		}
+
 		originalInput := appConfig.InputDir
 		stat, err := os.Stat(originalInput)
 		if err != nil {
@@ -193,6 +199,11 @@ func Execute() {
 	}
 }
 
+func sanitizePath(path string) string {
+	path = strings.TrimSpace(path)
+	return strings.Trim(path, "\"'")
+}
+
 func runWizard() {
 	fmt.Println("Tryb interaktywny: Nie podano flag, więc zadam kilka pytań...")
 
@@ -214,6 +225,8 @@ func runWizard() {
 	}
 	err := survey.AskOne(inputPrompt, &appConfig.InputDir, survey.WithValidator(survey.Required))
 	handleSurveyErr(err)
+
+	appConfig.InputDir = sanitizePath(appConfig.InputDir)
 
 	// Obliczamy domyślny output
 	var defaultOut string
