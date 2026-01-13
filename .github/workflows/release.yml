@@ -24,17 +24,17 @@ jobs:
           - os: ubuntu-latest
             goos: linux
             goarch: amd64
-            output_name: gopress-linux
+            output_name: gopress_linux_amd64
             install_cmd: sudo apt-get update && sudo apt-get install -y libheif-dev
           - os: windows-latest
             goos: windows
             goarch: amd64
-            output_name: gopress.exe
+            output_name: gopress_windows_amd64.exe
             install_cmd: echo "No extra deps for Windows"
           - os: macos-14 # Apple Silicon (M1) runner
             goos: darwin
             goarch: arm64
-            output_name: gopress-mac
+            output_name: gopress_darwin_arm64
             install_cmd: brew install libheif
 
     steps:
