@@ -210,19 +210,23 @@ func runWizard() {
 
 	// Sprawdzenie aktualizacji (Synchronicznie, aby uniknąć problemów z stdin)
 	fmt.Print("Sprawdzanie aktualizacji... ")
-	rel, err := version.CheckForUpdates("Pepegakac123", "gopress")
-	if err == nil && rel != nil {
-		fmt.Printf("\nDostępna jest nowa wersja: %s\n", rel.TagName)
+	rel, found, err := version.CheckUpdate("Pepegakac123/gopress")
+	if err == nil && found && rel != nil {
+		fmt.Printf("\nDostępna jest nowa wersja: %s\n", rel.Version.String())
 		var update bool
 		prompt := &survey.Confirm{
-			Message: "Czy chcesz pobrać nową wersję?",
+			Message: "Czy chcesz pobrać i zaktualizować automatycznie?",
 			Default: true,
 		}
-		// Jeśli użytkownik wybierze TAK, otwieramy i kończymy
+		// Jeśli użytkownik wybierze TAK, aktualizujemy
 		if err := survey.AskOne(prompt, &update); err == nil && update {
-			fmt.Println("Otwieranie przeglądarki...")
-			version.OpenBrowser(rel.HTMLURL)
-			os.Exit(0)
+			fmt.Println("🚀 Pobieranie i instalowanie aktualizacji...")
+			if err := version.PerformUpdate("Pepegakac123/gopress"); err != nil {
+				fmt.Printf("❌ Błąd aktualizacji: %v\n", err)
+			} else {
+				fmt.Println("✅ Sukces! Zaktualizowano pomyślnie. Uruchom program ponownie.")
+				os.Exit(0)
+			}
 		}
 	} else {
 		fmt.Println("(Aktualna)")
