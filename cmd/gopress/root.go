@@ -20,6 +20,7 @@ import (
 	"github.com/Pepegakac123/gopress/internal/processor"
 	"github.com/Pepegakac123/gopress/internal/scanner"
 	"github.com/Pepegakac123/gopress/internal/uploader"
+	"github.com/Pepegakac123/gopress/internal/version"
 	"github.com/Pepegakac123/gopress/internal/wordpress"
 	"github.com/spf13/cobra"
 )
@@ -207,6 +208,23 @@ func sanitizePath(path string) string {
 func runWizard() {
 	fmt.Println("Tryb interaktywny: Nie podano flag, więc zadam kilka pytań...")
 
+	// Sprawdzenie aktualizacji
+	go func() {
+		rel, err := version.CheckForUpdates("Pepegakac123", "gopress")
+		if err == nil && rel != nil {
+			fmt.Printf("\n🔔  Dostępna jest nowa wersja: %s\n", rel.TagName)
+			var update bool
+			prompt := &survey.Confirm{
+				Message: "Czy chcesz pobrać nową wersję?",
+				Default: true,
+			}
+			if err := survey.AskOne(prompt, &update); err == nil && update {
+				version.OpenBrowser(rel.HTMLURL)
+				os.Exit(0)
+			}
+		}
+	}()
+
 	handleSurveyErr := func(err error) {
 		if err == nil {
 			return
@@ -218,6 +236,7 @@ func runWizard() {
 		fmt.Printf("\n❌ Błąd ankiety: %v\n", err)
 		os.Exit(1)
 	}
+	appConfig.DeleteOriginals = false
 
 	inputPrompt := &survey.Input{
 		Message: "Gdzie są zdjęcia (folder wejściowy)?",
