@@ -57,7 +57,7 @@ jobs:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
         run: |
-          go build -ldflags "-s -w" -o ${{ matrix.output_name }} ./cmd/gopress
+          go build -ldflags "-s -w -X 'github.com/Pepegakac123/gopress/internal/version.CurrentVersion=${{ github.ref_name }}'" -o ${{ matrix.output_name }} ./cmd/gopress
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
