@@ -68,16 +68,12 @@ func OpenBrowser(url string) error {
 func compareVersions(v1, v2 string) int {
 	v1 = strings.TrimPrefix(v1, "v")
 	v2 = strings.TrimPrefix(v2, "v")
-	
+
 	// Jeśli wersje są identyczne
 	if v1 == v2 {
 		return 0
 	}
 
-	// Proste porównanie leksykograficzne (nie jest idealne dla semver, ale wystarczy na start)
-	// v1.10.0 > v1.9.0 (z stringami by nie zadziałało poprawnie, ale przy założeniu poprawnych semver zazwyczaj działa)
-	// Lepiej by było rozparsować na inty, ale dla uproszczenia:
-	
 	// Spróbujmy jednak parsować podstawowy semver
 	parts1 := strings.Split(v1, ".")
 	parts2 := strings.Split(v2, ".")
@@ -92,7 +88,7 @@ func compareVersions(v1, v2 string) int {
 		if i < len(parts1) {
 			fmt.Sscanf(parts1[i], "%d", &n1)
 		}
-		
+
 		n2 := 0
 		if i < len(parts2) {
 			fmt.Sscanf(parts2[i], "%d", &n2)
