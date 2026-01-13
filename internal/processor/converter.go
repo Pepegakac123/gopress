@@ -1,6 +1,7 @@
 package processor
 
 import (
+	"bytes"
 	"fmt"
 	"image"
 	"image/draw"
@@ -11,6 +12,7 @@ import (
 	"github.com/chai2010/webp"
 	"github.com/disintegration/imaging"
 	"github.com/jdeng/goheif"
+	"github.com/rwcarlsen/goexif/exif"
 
 	_ "golang.org/x/image/bmp"
 	_ "golang.org/x/image/tiff"
@@ -19,27 +21,57 @@ import (
 // ConvertFile bierze plik wejściowy, zmienia rozmiar i zapisuje jako WebP w outputDir.
 // To jest funkcja SYNCHRONICZNA (blokująca).
 func ConvertFile(inputPath string, outputDir string, quality int, maxWidth int) (int64, string, error) {
-	file, err := os.Open(inputPath)
-	if err != nil {
-		return 0, "", fmt.Errorf("nie udało się otworzyć pliku: %w", err)
-	}
-	defer file.Close()
-
 	var src image.Image
+	var err error
 
 	ext := strings.ToLower(filepath.Ext(inputPath))
 	if ext == ".heic" || ext == ".heif" {
+		file, err := os.Open(inputPath)
+		if err != nil {
+			return 0, "", fmt.Errorf("nie udało się otworzyć pliku: %w", err)
+		}
+		defer file.Close()
 
 		src, err = goheif.Decode(file)
 		if err != nil {
 			return 0, "", fmt.Errorf("błąd dekodowania HEIC: %w", err)
 		}
+
+		// Obsługa rotacji EXIF dla HEIC
+		if _, err := file.Seek(0, 0); err == nil {
+			if exifData, err := goheif.ExtractExif(file); err == nil {
+				if x, err := exif.Decode(bytes.NewReader(exifData)); err == nil {
+					if tag, err := x.Get(exif.Orientation); err == nil {
+						if orient, err := tag.Int(0); err == nil {
+							switch orient {
+							case 2:
+								src = imaging.FlipH(src)
+							case 3:
+								src = imaging.Rotate180(src)
+							case 4:
+								src = imaging.FlipV(src)
+							case 5:
+								src = imaging.Transpose(src)
+							case 6:
+								src = imaging.Rotate270(src)
+							case 7:
+								src = imaging.Transverse(src)
+							case 8:
+								src = imaging.Rotate90(src)
+							}
+						}
+					}
+				}
+			}
+		}
 	} else {
-		src, err = imaging.Decode(file)
+		// Używamy imaging.Open, który automatycznie obsługuje orientację EXIF
+		src, err = imaging.Open(inputPath)
 		if err != nil {
 			return 0, "", fmt.Errorf("nieznany format obrazu: %w", err)
 		}
 	}
+
 	var dst image.Image
 
 	if src.Bounds().Dx() > maxWidth {

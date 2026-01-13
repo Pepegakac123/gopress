@@ -52,7 +52,7 @@ func Run(ctx context.Context, client *wordpress.Client, files []string, outputDi
 	wg.Wait()
 
 	// Raport końcowy
-	fmt.Println("\n")
+	fmt.Println()
 	if uploadErrors > 0 {
 		fmt.Printf("⚠️  Zakończono z błędami uploadu: %d\n", uploadErrors)
 	} else {
