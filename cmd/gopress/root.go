@@ -245,7 +245,7 @@ func runWizard() {
 		Message: "Gdzie są zdjęcia (folder wejściowy)?",
 		Default: "./raw",
 	}
-	err := survey.AskOne(inputPrompt, &appConfig.InputDir, survey.WithValidator(survey.Required))
+	err = survey.AskOne(inputPrompt, &appConfig.InputDir, survey.WithValidator(survey.Required))
 	handleSurveyErr(err)
 
 	appConfig.InputDir = sanitizePath(appConfig.InputDir)
