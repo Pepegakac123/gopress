@@ -3,6 +3,7 @@ package version
 import (
 	"fmt"
 	"os"
+	"runtime"
 
 	"github.com/blang/semver"
 	"github.com/rhysd/go-github-selfupdate/selfupdate"
@@ -66,4 +67,18 @@ func PerformUpdate(slug string) error {
 	}
 
 	return nil
+}
+
+// CleanupOldBinary usuwa pozostałości po aktualizacji (pliki .old na Windows)
+func CleanupOldBinary() {
+	if runtime.GOOS != "windows" {
+		return
+	}
+	exe, err := os.Executable()
+	if err != nil {
+		return
+	}
+	oldExe := exe + ".old"
+	// Próbujemy usunąć, ignorujemy błędy (np. jeśli plik nie istnieje lub jest zablokowany)
+	_ = os.Remove(oldExe)
 }

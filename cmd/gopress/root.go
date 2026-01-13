@@ -206,6 +206,9 @@ func sanitizePath(path string) string {
 }
 
 func runWizard() {
+	// Czyszczenie starych plików po aktualizacji
+	version.CleanupOldBinary()
+
 	fmt.Println("Tryb interaktywny: Nie podano flag, więc zadam kilka pytań...")
 
 	// Sprawdzenie aktualizacji (Synchronicznie, aby uniknąć problemów z stdin)
@@ -220,11 +223,13 @@ func runWizard() {
 		}
 		// Jeśli użytkownik wybierze TAK, aktualizujemy
 		if err := survey.AskOne(prompt, &update); err == nil && update {
-			fmt.Println("🚀 Pobieranie i instalowanie aktualizacji...")
+			fmt.Println("🚀 Pobieranie i instalowanie aktualizacji... (To może chwilę potrwać)")
 			if err := version.PerformUpdate("Pepegakac123/gopress"); err != nil {
 				fmt.Printf("❌ Błąd aktualizacji: %v\n", err)
 			} else {
-				fmt.Println("✅ Sukces! Zaktualizowano pomyślnie. Uruchom program ponownie.")
+				fmt.Println("✅ Sukces! Zaktualizowano pomyślnie.")
+				fmt.Println("Naciśnij Enter, aby zamknąć program, a następnie uruchom go ponownie.")
+				fmt.Scanln()
 				os.Exit(0)
 			}
 		}
