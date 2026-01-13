@@ -5,3 +5,5 @@ bin/
 tmp_data/
 playground/
 *.log
+*.exe
+*.old
