@@ -228,8 +228,10 @@ func runWizard() {
 				os.Exit(0)
 			}
 		}
+	} else if err != nil {
+		fmt.Printf("\n❌ Błąd podczas sprawdzania aktualizacji: %v\n", err)
 	} else {
-		fmt.Println("(Aktualna)")
+		fmt.Println("✅ (Aktualna)")
 	}
 
 	handleSurveyErr := func(err error) {

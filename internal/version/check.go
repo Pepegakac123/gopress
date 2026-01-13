@@ -15,21 +15,27 @@ var CurrentVersion = "v0.0.0"
 // CheckUpdate sprawdza, czy dostępna jest nowsza wersja w podanym repozytorium (slug: "owner/repo").
 // Zwraca znaleziony release, flagę found (czy znaleziono cokolwiek) oraz ewentualny błąd.
 func CheckUpdate(slug string) (*selfupdate.Release, bool, error) {
+	fmt.Println("DEBUG: Rozpoczynam wykrywanie wersji...", slug)
 	latest, found, err := selfupdate.DetectLatest(slug)
 	if err != nil {
 		return nil, false, fmt.Errorf("błąd sprawdzania aktualizacji: %w", err)
 	}
 	if !found {
+		fmt.Println("DEBUG: Nie znaleziono żadnej wersji na GitHub.")
 		return nil, false, nil
 	}
+
+	fmt.Printf("DEBUG: Znaleziono najnowszą wersję na GitHub: %s\n", latest.Version.String())
+	fmt.Printf("DEBUG: Obecna wersja lokalna: %s\n", CurrentVersion)
 
 	// Parsowanie obecnej wersji
 	vCurrent, err := semver.ParseTolerant(CurrentVersion)
 	if err != nil {
-		// Jeśli obecna wersja jest "v0.0.0" lub niepoprawna, zakładamy, że chcemy zaktualizować (dev mode)
-		// Ale dla bezpieczeństwa w produkcji:
+		fmt.Printf("DEBUG: Błąd parsowania obecnej wersji (%s): %v. Wymuszam aktualizację.\n", CurrentVersion, err)
 		return latest, true, nil
 	}
+
+	fmt.Printf("DEBUG: Porównanie: Czy %s > %s? Wynik: %v\n", latest.Version.String(), vCurrent.String(), latest.Version.GT(vCurrent))
 
 	// Jeśli najnowsza wersja jest nowsza niż obecna
 	if latest.Version.GT(vCurrent) {
