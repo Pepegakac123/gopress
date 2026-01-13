@@ -208,22 +208,25 @@ func sanitizePath(path string) string {
 func runWizard() {
 	fmt.Println("Tryb interaktywny: Nie podano flag, więc zadam kilka pytań...")
 
-	// Sprawdzenie aktualizacji
-	go func() {
-		rel, err := version.CheckForUpdates("Pepegakac123", "gopress")
-		if err == nil && rel != nil {
-			fmt.Printf("\n🔔  Dostępna jest nowa wersja: %s\n", rel.TagName)
-			var update bool
-			prompt := &survey.Confirm{
-				Message: "Czy chcesz pobrać nową wersję?",
-				Default: true,
-			}
-			if err := survey.AskOne(prompt, &update); err == nil && update {
-				version.OpenBrowser(rel.HTMLURL)
-				os.Exit(0)
-			}
+	// Sprawdzenie aktualizacji (Synchronicznie, aby uniknąć problemów z stdin)
+	fmt.Print("🔍 Sprawdzanie aktualizacji... ")
+	rel, err := version.CheckForUpdates("Pepegakac123", "gopress")
+	if err == nil && rel != nil {
+		fmt.Printf("\n🔔  Dostępna jest nowa wersja: %s\n", rel.TagName)
+		var update bool
+		prompt := &survey.Confirm{
+			Message: "Czy chcesz pobrać nową wersję?",
+			Default: true,
 		}
-	}()
+		// Jeśli użytkownik wybierze TAK, otwieramy i kończymy
+		if err := survey.AskOne(prompt, &update); err == nil && update {
+			fmt.Println("🚀 Otwieranie przeglądarki...")
+			version.OpenBrowser(rel.HTMLURL)
+			os.Exit(0)
+		}
+	} else {
+		fmt.Println("✅ (Aktualna)")
+	}
 
 	handleSurveyErr := func(err error) {
 		if err == nil {
