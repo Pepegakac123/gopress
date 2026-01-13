@@ -1,106 +1,77 @@
 package version
 
 import (
-	"encoding/json"
 	"fmt"
-	"net/http"
-	"os/exec"
+	"os"
 	"runtime"
-	"strings"
-	"time"
+
+	"github.com/blang/semver"
+	"github.com/rhysd/go-github-selfupdate/selfupdate"
 )
 
-// CurrentVersion to aktualna wersja aplikacji
-// Wartość tej zmiennej powinna być nadpisywana podczas budowania za pomocą flagi ldflags
+// CurrentVersion to aktualna wersja aplikacji.
+// Wartość powinna być nadpisywana przez ldflags podczas budowania (np. -X ...CurrentVersion=v1.2.1).
 var CurrentVersion = "v0.0.0"
 
-type Release struct {
-	TagName string `json:"tag_name"`
-	HTMLURL string `json:"html_url"`
-}
-
-// CheckForUpdates sprawdza, czy dostępna jest nowsza wersja na GitHub
-func CheckForUpdates(repoOwner, repoName string) (*Release, error) {
-	url := fmt.Sprintf("https://api.github.com/repos/%s/%s/releases/latest", repoOwner, repoName)
-	client := &http.Client{Timeout: 5 * time.Second}
-
-	resp, err := client.Get(url)
+// CheckUpdate sprawdza, czy dostępna jest nowsza wersja w podanym repozytorium (slug: "owner/repo").
+// Zwraca znaleziony release, flagę found (czy znaleziono cokolwiek) oraz ewentualny błąd.
+func CheckUpdate(slug string) (*selfupdate.Release, bool, error) {
+	latest, found, err := selfupdate.DetectLatest(slug)
 	if err != nil {
-		return nil, err
+		return nil, false, fmt.Errorf("błąd sprawdzania aktualizacji: %w", err)
 	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("błąd pobierania wersji: %s", resp.Status)
+	if !found {
+		return nil, false, nil
 	}
 
-	var release Release
-	if err := json.NewDecoder(resp.Body).Decode(&release); err != nil {
-		return nil, err
+	// Parsowanie obecnej wersji
+	vCurrent, err := semver.ParseTolerant(CurrentVersion)
+	if err != nil {
+		// Jeśli obecna wersja jest niepoprawna, zakładamy, że chcemy zaktualizować (dev mode)
+		return latest, true, nil
 	}
 
-	// Porównanie wersji
-	// Zakładamy format vX.Y.Z
-	if compareVersions(release.TagName, CurrentVersion) > 0 {
-		return &release, nil
+	// Jeśli najnowsza wersja jest nowsza niż obecna
+	if latest.Version.GT(vCurrent) {
+		return latest, true, nil
 	}
 
-	return nil, nil
+	return nil, false, nil
 }
 
-func OpenBrowser(url string) error {
-	var cmd *exec.Cmd
-
-	switch runtime.GOOS {
-	case "windows":
-		cmd = exec.Command("cmd", "/c", "start", url)
-	case "darwin":
-		cmd = exec.Command("open", url)
-	case "linux":
-		cmd = exec.Command("xdg-open", url)
-	default:
-		return fmt.Errorf("nieobsługiwany system operacyjny")
+// PerformUpdate pobiera i instaluje nową wersję.
+func PerformUpdate(slug string) error {
+	// Ponowne pobranie najnowszej wersji, aby przekazać ją do UpdateTo
+	latest, found, err := selfupdate.DetectLatest(slug)
+	if err != nil {
+		return err
 	}
-	return cmd.Start()
+	if !found {
+		return fmt.Errorf("nie znaleziono wydania do aktualizacji")
+	}
+
+	exe, err := os.Executable()
+	if err != nil {
+		return fmt.Errorf("nie udało się ustalić ścieżki pliku wykonywalnego: %w", err)
+	}
+
+	if err := selfupdate.UpdateTo(latest.AssetURL, exe); err != nil {
+		return err
+	}
+
+	return nil
 }
 
-// compareVersions zwraca 1 jeśli v1 > v2, -1 jeśli v1 < v2, 0 jeśli v1 == v2
-func compareVersions(v1, v2 string) int {
-	v1 = strings.TrimPrefix(v1, "v")
-	v2 = strings.TrimPrefix(v2, "v")
-
-	// Jeśli wersje są identyczne
-	if v1 == v2 {
-		return 0
+// CleanupOldBinary usuwa pozostałości po aktualizacji (pliki .old na Windows)
+func CleanupOldBinary() {
+	if runtime.GOOS != "windows" {
+		return
 	}
-
-	// Spróbujmy jednak parsować podstawowy semver
-	parts1 := strings.Split(v1, ".")
-	parts2 := strings.Split(v2, ".")
-
-	maxLen := len(parts1)
-	if len(parts2) > maxLen {
-		maxLen = len(parts2)
+	exe, err := os.Executable()
+	if err != nil {
+		return
 	}
-
-	for i := 0; i < maxLen; i++ {
-		n1 := 0
-		if i < len(parts1) {
-			fmt.Sscanf(parts1[i], "%d", &n1)
-		}
-
-		n2 := 0
-		if i < len(parts2) {
-			fmt.Sscanf(parts2[i], "%d", &n2)
-		}
-
-		if n1 > n2 {
-			return 1
-		}
-		if n1 < n2 {
-			return -1
-		}
-	}
-
-	return 0
+	oldExe := exe + ".old"
+	// Próbujemy usunąć, ignorujemy błędy (np. jeśli plik nie istnieje lub jest zablokowany)
+	_ = os.Remove(oldExe)
 }

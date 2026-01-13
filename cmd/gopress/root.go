@@ -36,6 +36,8 @@ type Config struct {
 	Quality         int
 	MaxWidth        int
 	DeleteOriginals bool
+	Version         bool
+	Update          bool
 }
 
 var appConfig Config
@@ -46,6 +48,33 @@ var rootCmd = &cobra.Command{
 	Long: `GoPress to Twój asystent do zadań specjalnych.
 	Bierze cały folder zdjęć (JPG, PNG, a nawet HEIC z iPhone'a), automatycznie przerabia je na szybki format WebP, zmniejsza do odpowiedniego rozmiaru i wysyła na stronę internetową.`,
 	PreRunE: func(cmd *cobra.Command, args []string) error {
+		if appConfig.Version {
+			fmt.Printf("GoPress version %s\n", version.CurrentVersion)
+			os.Exit(0)
+		}
+
+		if appConfig.Update {
+			fmt.Print("Sprawdzanie aktualizacji... ")
+			rel, found, err := version.CheckUpdate("Pepegakac123/gopress")
+			if err != nil {
+				fmt.Printf("❌ Błąd: %v\n", err)
+				os.Exit(1)
+			}
+			if !found || rel == nil {
+				fmt.Println("✅ Masz już najnowszą wersję.")
+				os.Exit(0)
+			}
+
+			fmt.Printf("\nDostępna nowa wersja: %s. Pobieranie...\n", rel.Version.String())
+			if err := version.PerformUpdate("Pepegakac123/gopress"); err != nil {
+				fmt.Printf("❌ Błąd aktualizacji: %v\n", err)
+				os.Exit(1)
+			}
+			fmt.Println("✅ Sukces! Zaktualizowano pomyślnie.")
+			fmt.Println("Naciśnij Enter, aby zamknąć program, a następnie uruchom go ponownie.")
+			fmt.Scanln()
+			os.Exit(0)
+		}
 
 		if appConfig.Quality < 0 || appConfig.Quality > 100 {
 			return fmt.Errorf("nieprawidłowa jakość (%d). Podaj wartość między 0 a 100", appConfig.Quality)
@@ -191,6 +220,10 @@ func init() {
 	rootCmd.Flags().BoolVarP(&appConfig.DeleteOriginals, "delete", "d", false, "USUŃ oryginały po konwersji (Ostrożnie! Tej operacji nie da się cofnąć)")
 	// FileBird
 	rootCmd.Flags().StringVar(&appConfig.FileBirdToken, "fb-token", "", "Token FileBird (jeśli chcesz zachować strukturę folderów) i strona używa wtyczki FileBird")
+
+	// Globalne info/aktualizacja
+	rootCmd.Flags().BoolVarP(&appConfig.Version, "version", "v", false, "Wyświetl wersję programu")
+	rootCmd.Flags().BoolVar(&appConfig.Update, "update", false, "Sprawdź i zainstaluj aktualizację")
 }
 
 func Execute() {
@@ -206,26 +239,37 @@ func sanitizePath(path string) string {
 }
 
 func runWizard() {
+	// Czyszczenie starych plików po aktualizacji
+	version.CleanupOldBinary()
+
 	fmt.Println("Tryb interaktywny: Nie podano flag, więc zadam kilka pytań...")
 
 	// Sprawdzenie aktualizacji (Synchronicznie, aby uniknąć problemów z stdin)
 	fmt.Print("Sprawdzanie aktualizacji... ")
-	rel, err := version.CheckForUpdates("Pepegakac123", "gopress")
-	if err == nil && rel != nil {
-		fmt.Printf("\nDostępna jest nowa wersja: %s\n", rel.TagName)
+	rel, found, err := version.CheckUpdate("Pepegakac123/gopress")
+	if err == nil && found && rel != nil {
+		fmt.Printf("\nDostępna jest nowa wersja: %s\n", rel.Version.String())
 		var update bool
 		prompt := &survey.Confirm{
-			Message: "Czy chcesz pobrać nową wersję?",
+			Message: "Czy chcesz pobrać i zaktualizować automatycznie?",
 			Default: true,
 		}
-		// Jeśli użytkownik wybierze TAK, otwieramy i kończymy
+		// Jeśli użytkownik wybierze TAK, aktualizujemy
 		if err := survey.AskOne(prompt, &update); err == nil && update {
-			fmt.Println("Otwieranie przeglądarki...")
-			version.OpenBrowser(rel.HTMLURL)
-			os.Exit(0)
+			fmt.Println("🚀 Pobieranie i instalowanie aktualizacji... (To może chwilę potrwać)")
+			if err := version.PerformUpdate("Pepegakac123/gopress"); err != nil {
+				fmt.Printf("❌ Błąd aktualizacji: %v\n", err)
+			} else {
+				fmt.Println("✅ Sukces! Zaktualizowano pomyślnie.")
+				fmt.Println("Naciśnij Enter, aby zamknąć program, a następnie uruchom go ponownie.")
+				fmt.Scanln()
+				os.Exit(0)
+			}
 		}
+	} else if err != nil {
+		fmt.Printf("\n❌ Błąd podczas sprawdzania aktualizacji: %v\n", err)
 	} else {
-		fmt.Println("(Aktualna)")
+		fmt.Println("✅ (Aktualna)")
 	}
 
 	handleSurveyErr := func(err error) {
