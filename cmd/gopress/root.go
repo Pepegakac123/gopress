@@ -93,7 +93,7 @@ var rootCmd = &cobra.Command{
 		if isZip {
 			tempDir, err := os.MkdirTemp("", "gopress_unzip_*")
 			if err != nil {
-				log.Fatalf("❌ Błąd tworzenia katalogu tymczasowego: %v", err)
+				log.Fatalf("Błąd tworzenia katalogu tymczasowego: %v", err)
 			}
 			defer func() {
 				if shouldCleanup {
@@ -101,9 +101,9 @@ var rootCmd = &cobra.Command{
 				}
 			}()
 
-			fmt.Printf("📦 Rozpakowywanie %s do %s...\n", originalInput, tempDir)
+			fmt.Printf("Rozpakowywanie %s do %s...\n", originalInput, tempDir)
 			if err := unzip(originalInput, tempDir); err != nil {
-				log.Fatalf("❌ Błąd rozpakowywania zip: %v", err)
+				log.Fatalf("Błąd rozpakowywania zip: %v", err)
 			}
 			appConfig.InputDir = tempDir
 		}
@@ -111,29 +111,29 @@ var rootCmd = &cobra.Command{
 		var wpClient *wordpress.Client
 		if appConfig.Upload {
 			if appConfig.WpDomain == "" || appConfig.WpUser == "" || appConfig.WpPassword == "" {
-				log.Fatal("❌ Błąd: Tryb --upload wymaga podania --wp-domain, --wp-user i --wp-secret. Uruchom program bez parametrów, aby włączyć kreatora.")
+				log.Fatal("Błąd: Tryb --upload wymaga podania --wp-domain, --wp-user i --wp-secret. Uruchom program bez parametrów, aby włączyć kreatora.")
 			}
 			fmt.Println("\n Łączenie z WordPress...")
 			wpClient = wordpress.NewClient(appConfig.WpDomain, appConfig.WpUser, appConfig.WpPassword, appConfig.FileBirdToken)
 			if err := wpClient.CheckConnection(); err != nil {
 				log.Fatalf("Błąd połączenia z WP: %v", err)
 			}
-			fmt.Println("✅ Połączono z WordPress (Autoryzacja OK)")
+			fmt.Println("Połączono z WordPress (Autoryzacja OK)")
 		}
 
-		fmt.Printf("🔍 Skanowanie folderu: %s\n", appConfig.InputDir)
+		fmt.Printf("Skanowanie folderu: %s\n", appConfig.InputDir)
 
 		files, initialSize, err := scanner.FindImages(appConfig.InputDir)
 		if err != nil {
 			log.Fatalf("Bląd podczas skanowania %v", err)
 		}
 		if len(files) == 0 {
-			log.Fatal("⚠️ Nie znaleziono plików")
+			log.Fatal("Nie znaleziono plików")
 			return
 		}
 
-		fmt.Printf("✅ Znaleziono %d obrazów do przetworzenia.\n", len(files))
-		fmt.Printf("⚙️  Parametry: Jakość %d%%, Max Szerokość %dpx\n", appConfig.Quality, appConfig.MaxWidth)
+		fmt.Printf("Znaleziono %d obrazów do przetworzenia.\n", len(files))
+		fmt.Printf("Parametry: Jakość %d%%, Max Szerokość %dpx\n", appConfig.Quality, appConfig.MaxWidth)
 		if _, err := os.Stat(appConfig.OutputDir); os.IsNotExist(err) {
 			os.MkdirAll(appConfig.OutputDir, 0755)
 		}
@@ -163,7 +163,7 @@ var rootCmd = &cobra.Command{
 		if err := survey.AskOne(prompt, &openResult); err == nil && openResult {
 			if isZip {
 				shouldCleanup = false
-				fmt.Println("ℹ️  Tymczasowe pliki (rozpakowany ZIP) zostały zachowane, ponieważ otwierasz folder.")
+				fmt.Println("Tymczasowe pliki (rozpakowany ZIP) zostały zachowane, ponieważ otwierasz folder.")
 			}
 			openFolder(appConfig.OutputDir)
 		}
@@ -209,10 +209,10 @@ func runWizard() {
 	fmt.Println("Tryb interaktywny: Nie podano flag, więc zadam kilka pytań...")
 
 	// Sprawdzenie aktualizacji (Synchronicznie, aby uniknąć problemów z stdin)
-	fmt.Print("🔍 Sprawdzanie aktualizacji... ")
+	fmt.Print("Sprawdzanie aktualizacji... ")
 	rel, err := version.CheckForUpdates("Pepegakac123", "gopress")
 	if err == nil && rel != nil {
-		fmt.Printf("\n🔔  Dostępna jest nowa wersja: %s\n", rel.TagName)
+		fmt.Printf("\nDostępna jest nowa wersja: %s\n", rel.TagName)
 		var update bool
 		prompt := &survey.Confirm{
 			Message: "Czy chcesz pobrać nową wersję?",
@@ -220,12 +220,12 @@ func runWizard() {
 		}
 		// Jeśli użytkownik wybierze TAK, otwieramy i kończymy
 		if err := survey.AskOne(prompt, &update); err == nil && update {
-			fmt.Println("🚀 Otwieranie przeglądarki...")
+			fmt.Println("Otwieranie przeglądarki...")
 			version.OpenBrowser(rel.HTMLURL)
 			os.Exit(0)
 		}
 	} else {
-		fmt.Println("✅ (Aktualna)")
+		fmt.Println("(Aktualna)")
 	}
 
 	handleSurveyErr := func(err error) {
@@ -233,10 +233,10 @@ func runWizard() {
 			return
 		}
 		if err == terminal.InterruptErr {
-			fmt.Println("\n🛑 Przerwano przez użytkownika (Ctrl+C). Do widzenia!")
+			fmt.Println("\nPrzerwano przez użytkownika (Ctrl+C). Do widzenia!")
 			os.Exit(0)
 		}
-		fmt.Printf("\n❌ Błąd ankiety: %v\n", err)
+		fmt.Printf("\nBłąd ankiety: %v\n", err)
 		os.Exit(1)
 	}
 	appConfig.DeleteOriginals = false
@@ -310,7 +310,7 @@ func runWizard() {
 	}
 	// Pytania 6: Usuwanie oryginalnych plików
 	err = survey.AskOne(&survey.Confirm{
-		Message: "⚠️  Czy usunąć oryginalne pliki po konwersji?",
+		Message: "Czy usunąć oryginalne pliki po konwersji?",
 		Help:    "Oryginały zostaną bezpowrotnie usunięte z dysku. Zostaną tylko pliki WebP.",
 		Default: false,
 	}, &appConfig.DeleteOriginals)
@@ -352,9 +352,9 @@ func prepareFileBirdToken(client *wordpress.Client) {
 		return
 	}
 
-	fmt.Print("📂 Weryfikacja tokenu FileBird... ")
+	fmt.Print("Weryfikacja tokenu FileBird... ")
 	if err := client.CheckFileBirdConnection(); err != nil {
-		fmt.Printf("\n❌ BŁĄD weryfikacji tokenu: %v\n", err)
+		fmt.Printf("\nBŁĄD weryfikacji tokenu: %v\n", err)
 
 		var continueWithoutFolders bool
 		prompt := &survey.Confirm{
@@ -363,19 +363,19 @@ func prepareFileBirdToken(client *wordpress.Client) {
 		}
 
 		if err := survey.AskOne(prompt, &continueWithoutFolders); err != nil {
-			fmt.Println("\n🛑 Operacja anulowana.")
+			fmt.Println("\nOperacja anulowana.")
 			os.Exit(0)
 		}
 
 		if !continueWithoutFolders {
-			fmt.Println("🛑 Anulowano. Popraw token i spróbuj ponownie.")
+			fmt.Println("Anulowano. Popraw token i spróbuj ponownie.")
 			os.Exit(0)
 		}
 
-		fmt.Println("⚠️  Zrozumiałem. Kontynuuję upload w trybie płaskim.")
+		fmt.Println("Zrozumiałem. Kontynuuję upload w trybie płaskim.")
 		appConfig.FileBirdToken = ""
 	} else {
-		fmt.Println("✅ OK")
+		fmt.Println("OK")
 	}
 }
 
