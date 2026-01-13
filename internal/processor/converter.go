@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"image"
 	"image/draw"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -24,7 +25,36 @@ func ConvertFile(inputPath string, outputDir string, quality int, maxWidth int) 
 	var src image.Image
 	var err error
 
+	// Optymalizacja: Jeśli plik to WebP i jest mniejszy niż 400KB, kopiujemy go bez zmian
 	ext := strings.ToLower(filepath.Ext(inputPath))
+	info, err := os.Stat(inputPath)
+	if err != nil {
+		return 0, "", fmt.Errorf("nie udało się pobrać informacji o pliku: %w", err)
+	}
+
+	if ext == ".webp" && info.Size() < 400*1024 {
+		fileName := filepath.Base(inputPath)
+		outPath := filepath.Join(outputDir, fileName)
+
+		sourceFile, err := os.Open(inputPath)
+		if err != nil {
+			return 0, "", fmt.Errorf("nie udało się otworzyć pliku źródłowego: %w", err)
+		}
+		defer sourceFile.Close()
+
+		destFile, err := os.Create(outPath)
+		if err != nil {
+			return 0, "", fmt.Errorf("nie udało się utworzyć pliku docelowego: %w", err)
+		}
+		defer destFile.Close()
+
+		if _, err := io.Copy(destFile, sourceFile); err != nil {
+			return 0, "", fmt.Errorf("błąd kopiowania pliku: %w", err)
+		}
+
+		return info.Size(), outPath, nil
+	}
+
 	if ext == ".heic" || ext == ".heif" {
 		file, err := os.Open(inputPath)
 		if err != nil {
