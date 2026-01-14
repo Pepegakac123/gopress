@@ -62,20 +62,20 @@ var rootCmd = &cobra.Command{
 			fmt.Print("Sprawdzanie aktualizacji... ")
 			rel, found, err := version.CheckUpdate("Pepegakac123/gopress")
 			if err != nil {
-				fmt.Printf("❌ Błąd: %v\n", err)
+				fmt.Printf("Błąd: %v\n", err)
 				os.Exit(1)
 			}
 			if !found || rel == nil {
-				fmt.Println("✅ Masz już najnowszą wersję.")
+				fmt.Println("Masz już najnowszą wersję.")
 				os.Exit(0)
 			}
 
 			fmt.Printf("\nDostępna nowa wersja: %s. Pobieranie...\n", rel.Version.String())
 			if err := version.PerformUpdate("Pepegakac123/gopress"); err != nil {
-				fmt.Printf("❌ Błąd aktualizacji: %v\n", err)
+				fmt.Printf("Błąd aktualizacji: %v\n", err)
 				os.Exit(1)
 			}
-			fmt.Println("✅ Sukces! Zaktualizowano pomyślnie.")
+			fmt.Println("Sukces! Zaktualizowano pomyślnie.")
 			restartApplication()
 		}
 
@@ -259,18 +259,18 @@ func runWizard() {
 		}
 		// Jeśli użytkownik wybierze TAK, aktualizujemy
 		if err := survey.AskOne(prompt, &update); err == nil && update {
-			fmt.Println("🚀 Pobieranie i instalowanie aktualizacji... (To może chwilę potrwać)")
+			fmt.Println("Pobieranie i instalowanie aktualizacji... (To może chwilę potrwać)")
 			if err := version.PerformUpdate("Pepegakac123/gopress"); err != nil {
-				fmt.Printf("❌ Błąd aktualizacji: %v\n", err)
+				fmt.Printf("Błąd aktualizacji: %v\n", err)
 			} else {
-				fmt.Println("✅ Sukces! Zaktualizowano pomyślnie.")
+				fmt.Println("Sukces! Zaktualizowano pomyślnie.")
 				restartApplication()
 			}
 		}
 	} else if err != nil {
-		fmt.Printf("\n❌ Błąd podczas sprawdzania aktualizacji: %v\n", err)
+		fmt.Printf("\nBłąd podczas sprawdzania aktualizacji: %v\n", err)
 	} else {
-		fmt.Println("✅ (Aktualna)")
+		fmt.Println("(Aktualna)")
 	}
 
 	handleSurveyErr := func(err error) {
@@ -485,10 +485,10 @@ func openFolder(path string) error {
 }
 
 func restartApplication() {
-	fmt.Println("🔁 Restartowanie aplikacji...")
+	fmt.Println("Restartowanie aplikacji...")
 	exe, err := os.Executable()
 	if err != nil {
-		fmt.Printf("❌ Nie udało się zrestartować: %v\n", err)
+		fmt.Printf("Nie udało się zrestartować: %v\n", err)
 		return
 	}
 
@@ -499,7 +499,7 @@ func restartApplication() {
 	cmd.Env = os.Environ()
 
 	if err := cmd.Run(); err != nil {
-		fmt.Printf("❌ Błąd podczas restartu: %v\n", err)
+		fmt.Printf("Błąd podczas restartu: %v\n", err)
 		os.Exit(1)
 	}
 	os.Exit(0)
