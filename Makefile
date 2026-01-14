@@ -21,7 +21,7 @@ all: clean windows linux mac
 
 windows:
 	@echo "🔨 Budowanie dla Windows (x64)..."
-	CGO_ENABLED=1 GOOS=windows GOARCH=amd64 CC="$(ZIG_WIN_CC)" CXX="$(ZIG_WIN_CXX)" go build $(LDFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME).exe ./cmd/gopress
+	CGO_ENABLED=1 GOOS=windows GOARCH=amd64 CC="$(ZIG_WIN_CC)" CXX="$(ZIG_WIN_CXX)" go build -ldflags "-s -w -extldflags '-static'" -o $(BUILD_DIR)/$(BINARY_NAME).exe ./cmd/gopress
 
 linux:
 	@echo "🐧 Budowanie dla Linux (x64)..."

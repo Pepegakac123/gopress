@@ -26,16 +26,19 @@ jobs:
             goarch: amd64
             output_name: gopress_linux_amd64
             install_cmd: sudo apt-get update && sudo apt-get install -y libheif-dev
+            extra_ldflags: ""
           - os: windows-latest
             goos: windows
             goarch: amd64
             output_name: gopress_windows_amd64.exe
             install_cmd: echo "No extra deps for Windows"
+            extra_ldflags: "-extldflags '-static'"
           - os: macos-14 # Apple Silicon (M1) runner
             goos: darwin
             goarch: arm64
             output_name: gopress_darwin_arm64
             install_cmd: brew install libheif
+            extra_ldflags: ""
 
     steps:
       - name: Checkout code
@@ -57,7 +60,7 @@ jobs:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
         run: |
-          go build -ldflags "-s -w -X 'github.com/Pepegakac123/gopress/internal/version.CurrentVersion=${{ github.ref_name }}'" -o ${{ matrix.output_name }} ./cmd/gopress
+          go build -ldflags "-s -w ${{ matrix.extra_ldflags }} -X 'github.com/Pepegakac123/gopress/internal/version.CurrentVersion=${{ github.ref_name }}'" -o ${{ matrix.output_name }} ./cmd/gopress
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
