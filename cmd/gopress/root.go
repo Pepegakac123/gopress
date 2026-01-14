@@ -76,9 +76,7 @@ var rootCmd = &cobra.Command{
 				os.Exit(1)
 			}
 			fmt.Println("✅ Sukces! Zaktualizowano pomyślnie.")
-			fmt.Println("Naciśnij Enter, aby zamknąć program, a następnie uruchom go ponownie.")
-			fmt.Scanln()
-			os.Exit(0)
+			restartApplication()
 		}
 
 		if appConfig.Quality < 0 || appConfig.Quality > 100 {
@@ -266,9 +264,7 @@ func runWizard() {
 				fmt.Printf("❌ Błąd aktualizacji: %v\n", err)
 			} else {
 				fmt.Println("✅ Sukces! Zaktualizowano pomyślnie.")
-				fmt.Println("Naciśnij Enter, aby zamknąć program, a następnie uruchom go ponownie.")
-				fmt.Scanln()
-				os.Exit(0)
+				restartApplication()
 			}
 		}
 	} else if err != nil {
@@ -486,4 +482,25 @@ func openFolder(path string) error {
 		return fmt.Errorf("nieobsługiwany system operacyjny: %s", runtime.GOOS)
 	}
 	return cmd.Start()
+}
+
+func restartApplication() {
+	fmt.Println("🔁 Restartowanie aplikacji...")
+	exe, err := os.Executable()
+	if err != nil {
+		fmt.Printf("❌ Nie udało się zrestartować: %v\n", err)
+		return
+	}
+
+	cmd := exec.Command(exe, os.Args[1:]...)
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	cmd.Env = os.Environ()
+
+	if err := cmd.Run(); err != nil {
+		fmt.Printf("❌ Błąd podczas restartu: %v\n", err)
+		os.Exit(1)
+	}
+	os.Exit(0)
 }
