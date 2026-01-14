@@ -48,6 +48,11 @@ var rootCmd = &cobra.Command{
 	Long: `GoPress to Twój asystent do zadań specjalnych.
 	Bierze cały folder zdjęć (JPG, PNG, a nawet HEIC z iPhone'a), automatycznie przerabia je na szybki format WebP, zmniejsza do odpowiedniego rozmiaru i wysyła na stronę internetową.`,
 	PreRunE: func(cmd *cobra.Command, args []string) error {
+		// Automatyczna zmiana nazwy pliku (np. po pobraniu aktualizacji)
+		if err := version.EnsureBinaryName("gopress"); err != nil {
+			fmt.Printf("⚠️ Nie udało się zmienić nazwy programu: %v\n", err)
+		}
+
 		if appConfig.Version {
 			fmt.Printf("GoPress version %s\n", version.CurrentVersion)
 			os.Exit(0)
