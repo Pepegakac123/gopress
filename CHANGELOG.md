@@ -1,36 +1,45 @@
 # Changelog
 
-All notable changes to this project will be documented in this file.
+Wszystkie znaczące zmiany w tym projekcie będą dokumentowane w tym pliku.
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+Format bazuje na [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+a projekt przestrzega [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-01-19
+
+W tej wersji skupiliśmy się na poprawie doświadczenia podczas aktualizacji aplikacji. Chcemy, abyś zawsze wiedział, co się zmienia, zanim klikniesz "Tak".
+
 ### Added
-- Your new feature here.
+- **Podgląd zmian przed aktualizacją:** Od teraz, gdy GoPress wykryje nową wersję, wyświetli pełną listę nowości i poprawek bezpośrednio w terminalu. Działa to zarówno w trybie kreatora, jak i w trybie automatycznym (`--update`).
+- **Kumulatywna historia zmian:** Jeśli ominąłeś kilka aktualizacji (np. przechodzisz z 1.0.0 na 1.2.0), program pokaże Ci zmiany ze *wszystkich* wersji po drodze, a nie tylko z najnowszej. Masz pełny obraz sytuacji.
+- **Integracja z GitHub API:** Aplikacja pobiera teraz dane bezpośrednio z GitHub Releases, co gwarantuje, że informacje są zawsze aktualne i bogate w szczegóły.
+
+### Changed
+- Zmieniono sposób budowania opisów wydań na GitHubie. Od teraz są one automatycznie pobierane z tego pliku (`CHANGELOG.md`), co zapewnia spójność między dokumentacją a wydaniem.
 
 ## [1.1.0] - 2026-01-19
 
-### Added
-- Display changelog from GitHub release notes before updating.
+Ta wersja to przede wszystkim "porządki pod maską" oraz ważna poprawka dla użytkowników Linuxa.
 
 ### Fixed
-- A bug where the application failed to restart after an update on Linux, especially when using version managers like `mise`. The restart logic now uses `os.Args[0]` and `syscall.Exec` for more robustness.
+- **Naprawa restartu na Linuxie:** Rozwiązano problem, przez który aplikacja nie uruchamiała się ponownie automatycznie po aktualizacji na systemach Linux (szczególnie w środowiskach używających menedżerów wersji jak `mise` czy `asdf`). Mechanizm restartu jest teraz znacznie bardziej niezawodny.
 
 ### Changed
-- Refactored the massive `cmd/gopress/root.go` file into smaller, logical modules:
-  - `run.go`: Contains the main application execution logic.
-  - `wizard.go`: Contains the interactive wizard flow.
-  - `utils.go`: Contains common utility functions.
-  This improves code readability and maintainability.
+- **Gruntowna przebudowa kodu:** Główny plik aplikacji (`root.go`), który stał się zbyt duży, został podzielony na mniejsze, logiczne moduły (`run.go`, `wizard.go`, `utils.go`). Choć nie widać tego "na zewnątrz", ułatwi to nam szybsze dodawanie nowych funkcji w przyszłości i zmniejsza ryzyko błędów.
 
 ## [1.0.0] - 2026-01-18
 
+Pierwsze publiczne wydanie GoPress! 🎉
+
 ### Added
-- Initial version of GoPress.
-- Image processing (to WebP) and resizing.
-- ZIP file support.
-- WordPress uploader with FileBird integration.
-- Interactive wizard and silent mode with flags.
-- Self-update mechanism.
+- **Inteligentna konwersja:** Automatyczna konwersja folderów ze zdjęciami (JPG, PNG, HEIC) do formatu WebP.
+- **Smart Resize:** Inteligentne skalowanie obrazów – zmniejszamy gigantyczne zdjęcia, ale nie ruszamy tych, które już są małe.
+- **Obsługa ZIP:** Możliwość podania pliku `.zip` jako wejścia – program sam go rozpakuje, przetworzy i posprząta.
+- **WordPress Upload:** Automatyczne przesyłanie przetworzonych zdjęć do biblioteki mediów WordPress.
+- **Integracja z FileBird:** Unikalna funkcja odwzorowywania struktury lokalnych folderów w wirtualnych folderach wtyczki FileBird na WordPressie.
+- **Dwa tryby pracy:**
+    - **Interaktywny Kreator:** Prowadzi za rękę krok po kroku.
+    - **Tryb Cichy (CLI):** Pełna automatyzacja za pomocą flag (np. w skryptach CI/CD).
+- **Auto-Update:** Wbudowany mechanizm samodzielnej aktualizacji aplikacji.
