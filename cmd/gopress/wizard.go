@@ -23,6 +23,14 @@ func runWizard() {
 	rel, found, err := version.CheckUpdate("Pepegakac123/gopress")
 	if err == nil && found && rel != nil {
 		fmt.Printf("\nDostępna jest nowa wersja: %s\n", rel.Version.String())
+
+		// Wyświetlanie changelogu, jeśli istnieje
+		if rel.ReleaseNotes != "" {
+			fmt.Println("\n--- Zmiany w tej wersji ---")
+			fmt.Println(rel.ReleaseNotes)
+			fmt.Println("---------------------------")
+		}
+
 		var update bool
 		prompt := &survey.Confirm{
 			Message: "Czy chcesz pobrać i zaktualizować automatycznie?",

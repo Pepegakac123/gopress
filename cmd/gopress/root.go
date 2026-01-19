@@ -53,7 +53,16 @@ var rootCmd = &cobra.Command{
 				os.Exit(0)
 			}
 
-			fmt.Printf("\nDostępna nowa wersja: %s. Pobieranie...\n", rel.Version.String())
+			fmt.Printf("\nDostępna nowa wersja: %s.\n", rel.Version.String())
+
+			// Wyświetlanie changelogu, jeśli istnieje
+			if rel.ReleaseNotes != "" {
+				fmt.Println("\n--- Zmiany w tej wersji ---")
+				fmt.Println(rel.ReleaseNotes)
+				fmt.Println("---------------------------")
+			}
+
+			fmt.Println("Pobieranie...")
 			if err := version.PerformUpdate("Pepegakac123/gopress"); err != nil {
 				fmt.Printf("Błąd aktualizacji: %v\n", err)
 				os.Exit(1)
