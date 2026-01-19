@@ -7,10 +7,15 @@ a projekt przestrzega [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+## [1.3.3] - 2026-01-19
+
 ### Added
 - **Podgląd zmian przed aktualizacją:** Wyświetlanie listy zmian (changelog) pobranej z GitHub Releases przed zainstalowaniem nowej wersji.
 - **Kumulatywna historia zmian:** Wyświetlanie zmian ze wszystkich pominiętych wersji przy aktualizacji.
 - **Integracja z GitHub API:** Użycie klienta GitHub do pobierania szczegółowych informacji o wydaniach.
+
+### Changed
+- **Lepsza dokumentacja:** Zaktualizowano `README.md`, usuwając zbędne ozdobniki i dodając jasną instrukcję instalacji wymagań systemowych (`libheif`).
 
 ## [1.3.2] - 2026-01-15
 
