@@ -1,24 +1,23 @@
 package version
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
 	"runtime"
+	"sort"
 	"strings"
 
+	"github.com/Pepegakac123/gopress/internal/github"
 	"github.com/blang/semver"
+	gh "github.com/google/go-github/v58/github"
 	"github.com/rhysd/go-github-selfupdate/selfupdate"
 )
 
-// CurrentVersion to aktualna wersja aplikacji.
-// Wartość powinna być nadpisywana przez ldflags podczas budowania (np. -X ...CurrentVersion=v1.2.1).
 var CurrentVersion = "v0.0.0"
 
-// EnsureBinaryName sprawdza, czy plik wykonywalny ma oczekiwaną nazwę.
-// Jeśli nie, zmienia ją (np. z gopress_darwin_arm64 na gopress).
 func EnsureBinaryName(desiredName string) error {
-	// Pomiń w trybie deweloperskim
 	if CurrentVersion == "v0.0.0" {
 		return nil
 	}
@@ -31,7 +30,6 @@ func EnsureBinaryName(desiredName string) error {
 	dir := filepath.Dir(exe)
 	filename := filepath.Base(exe)
 
-	// Obsługa .exe dla Windows
 	targetName := desiredName
 	if runtime.GOOS == "windows" {
 		if !strings.EqualFold(filepath.Ext(targetName), ".exe") {
@@ -48,9 +46,7 @@ func EnsureBinaryName(desiredName string) error {
 
 	targetPath := filepath.Join(dir, targetName)
 
-	// Jeśli plik docelowy istnieje, usuń go (zastąpienie)
 	if _, err := os.Stat(targetPath); err == nil {
-		// Windows nie pozwala na nadpisanie rename, trzeba usunąć
 		if err := os.Remove(targetPath); err != nil {
 			return fmt.Errorf("nie można usunąć istniejącego pliku %s: %w", targetName, err)
 		}
@@ -64,41 +60,65 @@ func EnsureBinaryName(desiredName string) error {
 	return nil
 }
 
-// CheckUpdate sprawdza, czy dostępna jest nowsza wersja w podanym repozytorium (slug: "owner/repo").
-// Zwraca znaleziony release, flagę found (czy znaleziono cokolwiek) oraz ewentualny błąd.
-func CheckUpdate(slug string) (*selfupdate.Release, bool, error) {
-	latest, found, err := selfupdate.DetectLatest(slug)
-	if err != nil {
-		return nil, false, fmt.Errorf("błąd sprawdzania aktualizacji: %w", err)
+// CheckForUpdates sprawdza, czy dostępne są nowsze wersje w podanym repozytorium.
+// Zwraca posortowaną listę nowszych wydań.
+func CheckForUpdates(slug string) ([]*gh.RepositoryRelease, error) {
+	parts := strings.Split(slug, "/")
+	if len(parts) != 2 {
+		return nil, fmt.Errorf("nieprawidłowy format repozytorium: %s", slug)
 	}
-	if !found {
-		return nil, false, nil
+	owner, repo := parts[0], parts[1]
+
+	client := github.NewClient()
+	releases, _, err := client.Repositories.ListReleases(context.Background(), owner, repo, nil)
+	if err != nil {
+		return nil, fmt.Errorf("błąd pobierania wydań z GitHub: %w", err)
 	}
 
-	// Parsowanie obecnej wersji
 	vCurrent, err := semver.ParseTolerant(CurrentVersion)
 	if err != nil {
-		// Jeśli obecna wersja jest niepoprawna, zakładamy, że chcemy zaktualizować (dev mode)
-		return latest, true, nil
+		return nil, fmt.Errorf("nieprawidłowy format obecnej wersji '%s': %w", CurrentVersion, err)
 	}
 
-	// Jeśli najnowsza wersja jest nowsza niż obecna
-	if latest.Version.GT(vCurrent) {
-		return latest, true, nil
+	var newerReleases []*gh.RepositoryRelease
+	for _, release := range releases {
+		vRelease, err := semver.ParseTolerant(release.GetTagName())
+		if err != nil {
+			continue // Pomiń tagi, które nie są poprawnymi wersjami
+		}
+
+		if vRelease.GT(vCurrent) {
+			newerReleases = append(newerReleases, release)
+		}
 	}
 
-	return nil, false, nil
+	// Sortuj od najstarszej do najnowszej
+	sort.Slice(newerReleases, func(i, j int) bool {
+		vI, _ := semver.ParseTolerant(newerReleases[i].GetTagName())
+		vJ, _ := semver.ParseTolerant(newerReleases[j].GetTagName())
+		return vI.LT(vJ)
+	})
+
+	return newerReleases, nil
 }
 
-// PerformUpdate pobiera i instaluje nową wersję.
-func PerformUpdate(slug string) error {
-	// Ponowne pobranie najnowszej wersji, aby przekazać ją do UpdateTo
-	latest, found, err := selfupdate.DetectLatest(slug)
-	if err != nil {
-		return err
+// PerformUpdate pobiera i instaluje podaną wersję.
+func PerformUpdate(release *gh.RepositoryRelease) error {
+	if release == nil {
+		return fmt.Errorf("brak wydania do zainstalowania")
 	}
-	if !found {
-		return fmt.Errorf("nie znaleziono wydania do aktualizacji")
+
+	assetURL := ""
+	for _, asset := range release.Assets {
+		// Prosta logika dopasowania - można ją ulepszyć
+		if strings.Contains(asset.GetName(), runtime.GOOS) && strings.Contains(asset.GetName(), runtime.GOARCH) {
+			assetURL = asset.GetBrowserDownloadURL()
+			break
+		}
+	}
+
+	if assetURL == "" {
+		return fmt.Errorf("nie znaleziono odpowiedniego pliku binarnego dla %s/%s w wydaniu %s", runtime.GOOS, runtime.GOARCH, release.GetTagName())
 	}
 
 	exe, err := os.Executable()
@@ -106,14 +126,13 @@ func PerformUpdate(slug string) error {
 		return fmt.Errorf("nie udało się ustalić ścieżki pliku wykonywalnego: %w", err)
 	}
 
-	if err := selfupdate.UpdateTo(latest.AssetURL, exe); err != nil {
+	if err := selfupdate.UpdateTo(assetURL, exe); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-// CleanupOldBinary usuwa pozostałości po aktualizacji (pliki .old na Windows)
 func CleanupOldBinary() {
 	if runtime.GOOS != "windows" {
 		return
@@ -123,6 +142,5 @@ func CleanupOldBinary() {
 		return
 	}
 	oldExe := exe + ".old"
-	// Próbujemy usunąć, ignorujemy błędy (np. jeśli plik nie istnieje lub jest zablokowany)
 	_ = os.Remove(oldExe)
 }

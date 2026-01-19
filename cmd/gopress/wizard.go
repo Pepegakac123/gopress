@@ -20,15 +20,27 @@ func runWizard() {
 
 	// Sprawdzenie aktualizacji (Synchronicznie, aby uniknąć problemów z stdin)
 	fmt.Print("Sprawdzanie aktualizacji... ")
-	rel, found, err := version.CheckUpdate("Pepegakac123/gopress")
-	if err == nil && found && rel != nil {
-		fmt.Printf("\nDostępna jest nowa wersja: %s\n", rel.Version.String())
+	newerReleases, err := version.CheckForUpdates("Pepegakac123/gopress")
+	if err != nil {
+		fmt.Printf("\nBłąd podczas sprawdzania aktualizacji: %v\n", err)
+	}
 
-		// Wyświetlanie changelogu, jeśli istnieje
-		if rel.ReleaseNotes != "" {
-			fmt.Println("\n--- Zmiany w tej wersji ---")
-			fmt.Println(rel.ReleaseNotes)
-			fmt.Println("---------------------------")
+	if len(newerReleases) > 0 {
+		latestRelease := newerReleases[len(newerReleases)-1]
+		fmt.Printf("\nDostępna jest nowa wersja: %s (Twoja to %s)\n", latestRelease.GetTagName(), version.CurrentVersion)
+
+		var cumulativeChangelog strings.Builder
+		for _, release := range newerReleases {
+			if release.GetBody() != "" {
+				cumulativeChangelog.WriteString(fmt.Sprintf("\n## Zmiany w wersji %s:\n", release.GetTagName()))
+				cumulativeChangelog.WriteString(strings.TrimSpace(release.GetBody()) + "\n")
+			}
+		}
+
+		if cumulativeChangelog.Len() > 0 {
+			fmt.Println("\n---")
+			fmt.Println(cumulativeChangelog.String())
+			fmt.Println("---")
 		}
 
 		var update bool
@@ -36,19 +48,16 @@ func runWizard() {
 			Message: "Czy chcesz pobrać i zaktualizować automatycznie?",
 			Default: true,
 		}
-		// Jeśli użytkownik wybierze TAK, aktualizujemy
 		if err := survey.AskOne(prompt, &update); err == nil && update {
 			fmt.Println("Pobieranie i instalowanie aktualizacji... (To może chwilę potrwać)")
-			if err := version.PerformUpdate("Pepegakac123/gopress"); err != nil {
+			if err := version.PerformUpdate(latestRelease); err != nil {
 				fmt.Printf("Błąd aktualizacji: %v\n", err)
 			} else {
 				fmt.Println("Sukces! Zaktualizowano pomyślnie.")
 				restartApplication()
 			}
 		}
-	} else if err != nil {
-		fmt.Printf("\nBłąd podczas sprawdzania aktualizacji: %v\n", err)
-	} else {
+	} else if err == nil {
 		fmt.Println("(Aktualna)")
 	}
 

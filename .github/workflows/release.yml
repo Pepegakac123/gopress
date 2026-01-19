@@ -98,9 +98,36 @@ jobs:
       - name: Display structure of downloaded files
         run: ls -R artifacts
 
+      - name: Get version from tag
+        id: tag
+        run: echo "version=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
+
+      - name: Get Changelog Entry
+        id: changelog
+        run: |
+          CHANGELOG_ENTRY=$(awk -v version="${{ steps.tag.outputs.version }}" '
+            BEGIN {
+              in_section=0
+            }
+            $0 ~ "## \\[" version "\\]" {
+              in_section=1
+              next
+            }
+            in_section==1 && /^## / {
+              exit
+            }
+            in_section==1 {
+              print
+            }
+          ' CHANGELOG.md)
+          echo "entry<<EOF" >> $GITHUB_OUTPUT
+          echo "$CHANGELOG_ENTRY" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
           draft: true
           files: artifacts/*
-          generate_release_notes: true
+          body: |
+            ${{ steps.changelog.outputs.entry }}

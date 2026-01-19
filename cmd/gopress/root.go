@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/Pepegakac123/gopress/internal/version"
 	"github.com/spf13/cobra"
@@ -31,7 +32,6 @@ var rootCmd = &cobra.Command{
 	Long: `GoPress to Twój asystent do zadań specjalnych.
 	Bierze cały folder zdjęć (JPG, PNG, a nawet HEIC z iPhone'a), automatycznie przerabia je na szybki format WebP, zmniejsza do odpowiedniego rozmiaru i wysyła na stronę internetową.`,
 	PreRunE: func(cmd *cobra.Command, args []string) error {
-		// Automatyczna zmiana nazwy pliku (np. po pobraniu aktualizacji)
 		if err := version.EnsureBinaryName("gopress"); err != nil {
 			fmt.Printf("Nie udało się zmienić nazwy programu: %v\n", err)
 		}
@@ -43,27 +43,36 @@ var rootCmd = &cobra.Command{
 
 		if appConfig.Update {
 			fmt.Print("Sprawdzanie aktualizacji... ")
-			rel, found, err := version.CheckUpdate("Pepegakac123/gopress")
+			newerReleases, err := version.CheckForUpdates("Pepegakac123/gopress")
 			if err != nil {
-				fmt.Printf("Błąd: %v\n", err)
+				fmt.Printf("\nBłąd podczas sprawdzania aktualizacji: %v\n", err)
 				os.Exit(1)
 			}
-			if !found || rel == nil {
+
+			if len(newerReleases) == 0 {
 				fmt.Println("Masz już najnowszą wersję.")
 				os.Exit(0)
 			}
 
-			fmt.Printf("\nDostępna nowa wersja: %s.\n", rel.Version.String())
+			latestRelease := newerReleases[len(newerReleases)-1]
+			fmt.Printf("\nDostępna jest nowa wersja: %s (Twoja to %s)\n", latestRelease.GetTagName(), version.CurrentVersion)
 
-			// Wyświetlanie changelogu, jeśli istnieje
-			if rel.ReleaseNotes != "" {
-				fmt.Println("\n--- Zmiany w tej wersji ---")
-				fmt.Println(rel.ReleaseNotes)
-				fmt.Println("---------------------------")
+			var cumulativeChangelog strings.Builder
+			for _, release := range newerReleases {
+				if release.GetBody() != "" {
+					cumulativeChangelog.WriteString(fmt.Sprintf("\n## Zmiany w wersji %s:\n", release.GetTagName()))
+					cumulativeChangelog.WriteString(strings.TrimSpace(release.GetBody()) + "\n")
+				}
+			}
+
+			if cumulativeChangelog.Len() > 0 {
+				fmt.Println("\n---")
+				fmt.Println(cumulativeChangelog.String())
+				fmt.Println("---")
 			}
 
 			fmt.Println("Pobieranie...")
-			if err := version.PerformUpdate("Pepegakac123/gopress"); err != nil {
+			if err := version.PerformUpdate(latestRelease); err != nil {
 				fmt.Printf("Błąd aktualizacji: %v\n", err)
 				os.Exit(1)
 			}
