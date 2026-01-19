@@ -7,39 +7,54 @@ a projekt przestrzega [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
-## [1.2.0] - 2026-01-19
-
-W tej wersji skupiliśmy się na poprawie doświadczenia podczas aktualizacji aplikacji. Chcemy, abyś zawsze wiedział, co się zmienia, zanim klikniesz "Tak".
-
 ### Added
-- **Podgląd zmian przed aktualizacją:** Od teraz, gdy GoPress wykryje nową wersję, wyświetli pełną listę nowości i poprawek bezpośrednio w terminalu. Działa to zarówno w trybie kreatora, jak i w trybie automatycznym (`--update`).
-- **Kumulatywna historia zmian:** Jeśli ominąłeś kilka aktualizacji (np. przechodzisz z 1.0.0 na 1.2.0), program pokaże Ci zmiany ze *wszystkich* wersji po drodze, a nie tylko z najnowszej. Masz pełny obraz sytuacji.
-- **Integracja z GitHub API:** Aplikacja pobiera teraz dane bezpośrednio z GitHub Releases, co gwarantuje, że informacje są zawsze aktualne i bogate w szczegóły.
+- **Podgląd zmian przed aktualizacją:** Wyświetlanie listy zmian (changelog) pobranej z GitHub Releases przed zainstalowaniem nowej wersji.
+- **Kumulatywna historia zmian:** Wyświetlanie zmian ze wszystkich pominiętych wersji przy aktualizacji.
+- **Integracja z GitHub API:** Użycie klienta GitHub do pobierania szczegółowych informacji o wydaniach.
 
-### Changed
-- Zmieniono sposób budowania opisów wydań na GitHubie. Od teraz są one automatycznie pobierane z tego pliku (`CHANGELOG.md`), co zapewnia spójność między dokumentacją a wydaniem.
-
-## [1.1.0] - 2026-01-19
-
-Ta wersja to przede wszystkim "porządki pod maską" oraz ważna poprawka dla użytkowników Linuxa.
+## [1.3.2] - 2026-01-15
 
 ### Fixed
-- **Naprawa restartu na Linuxie:** Rozwiązano problem, przez który aplikacja nie uruchamiała się ponownie automatycznie po aktualizacji na systemach Linux (szczególnie w środowiskach używających menedżerów wersji jak `mise` czy `asdf`). Mechanizm restartu jest teraz znacznie bardziej niezawodny.
+- **Naprawa restartu na Linuxie:** Rozwiązano krytyczny błąd, przez który aplikacja nie uruchamiała się ponownie po aktualizacji na systemach Linux. Poprawiono mechanizm restartu, aby był bardziej niezawodny, szczególnie w środowiskach z menedżerami wersji (np. `mise`).
+
+## [1.3.1] - 2026-01-14
 
 ### Changed
-- **Gruntowna przebudowa kodu:** Główny plik aplikacji (`root.go`), który stał się zbyt duży, został podzielony na mniejsze, logiczne moduły (`run.go`, `wizard.go`, `utils.go`). Choć nie widać tego "na zewnątrz", ułatwi to nam szybsze dodawanie nowych funkcji w przyszłości i zmniejsza ryzyko błędów.
+- **Optymalizacja kodu:** Przeprowadzono gruntowną refaktoryzację głównego modułu aplikacji (`root.go`). Kod został podzielony na mniejsze, wyspecjalizowane pliki (`wizard.go`, `run.go`, `utils.go`), co zwiększa stabilność i ułatwia przyszły rozwój.
 
-## [1.0.0] - 2026-01-18
+## [1.3.0] - 2026-01-14
+
+### Added
+- **Obsługa FileBird:** Dodano wsparcie dla wtyczki FileBird w WordPressie. Użytkownicy mogą teraz podać token API, aby automatycznie tworzyć i odwzorowywać strukturę folderów w bibliotece mediów WordPress.
+
+## [1.2.1] - 2026-01-14
+
+### Fixed
+- Drobne poprawki w logice aktualizacji automatycznych.
+
+## [1.1.1] - 2026-01-14
+
+### Fixed
+- Naprawiono błąd przy rozpakowywaniu niektórych plików ZIP zawierających zagnieżdżone katalogi.
+
+## [1.1.0] - 2026-01-06
+
+### Added
+- **Obsługa plików ZIP:** Dodano możliwość podania archiwum `.zip` jako źródła zdjęć. Aplikacja automatycznie rozpakuje archiwum, przetworzy zdjęcia i posprząta pliki tymczasowe.
+- **Nowe flagi CLI:** Rozszerzono tryb cichy o nowe opcje konfiguracyjne.
+
+## [1.0.1] - 2025-12-19
+
+### Fixed
+- Poprawiono obsługę ścieżek plików w systemie Windows (problem z backslashami `\`).
+
+## [1.0.0] - 2025-12-19
 
 Pierwsze publiczne wydanie GoPress! 🎉
 
 ### Added
-- **Inteligentna konwersja:** Automatyczna konwersja folderów ze zdjęciami (JPG, PNG, HEIC) do formatu WebP.
-- **Smart Resize:** Inteligentne skalowanie obrazów – zmniejszamy gigantyczne zdjęcia, ale nie ruszamy tych, które już są małe.
-- **Obsługa ZIP:** Możliwość podania pliku `.zip` jako wejścia – program sam go rozpakuje, przetworzy i posprząta.
-- **WordPress Upload:** Automatyczne przesyłanie przetworzonych zdjęć do biblioteki mediów WordPress.
-- **Integracja z FileBird:** Unikalna funkcja odwzorowywania struktury lokalnych folderów w wirtualnych folderach wtyczki FileBird na WordPressie.
-- **Dwa tryby pracy:**
-    - **Interaktywny Kreator:** Prowadzi za rękę krok po kroku.
-    - **Tryb Cichy (CLI):** Pełna automatyzacja za pomocą flag (np. w skryptach CI/CD).
-- **Auto-Update:** Wbudowany mechanizm samodzielnej aktualizacji aplikacji.
+- **Konwersja do WebP:** Automatyczna konwersja obrazów (JPG, PNG, HEIC).
+- **Smart Resize:** Inteligentne skalowanie dużych obrazów.
+- **WordPress Upload:** Przesyłanie przetworzonych zdjęć do WordPressa.
+- **Interaktywny Kreator:** Prosty w obsłudze tryb pytań i odpowiedzi.
+- **Tryb Cichy:** Automatyzacja dla zaawansowanych użytkowników.
