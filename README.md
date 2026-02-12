@@ -38,6 +38,8 @@ chmod +x gopress-linux
 
 Aplikacja może działać w dwóch trybach:
 
+**Nowość w v1.3.4:** Wsparcie dla autouzupełniania ścieżek (klawisz Tab) dla flag CLI oraz sugestie ścieżek w trybie interaktywnym.
+
 1. **Tryb Interaktywny (Kreator):** Uruchom program bez żadnych argumentów. Aplikacja poprowadzi Cię krok po kroku, pytając o folder źródłowy, dane do WordPressa itp.
 
 2. **Tryb Cichy (CLI):** Uruchom program z flagami, aby w pełni zautomatyzować proces.

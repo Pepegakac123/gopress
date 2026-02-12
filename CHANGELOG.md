@@ -7,6 +7,12 @@ a projekt przestrzega [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+## [1.3.4] - 2026-02-12
+
+### Added
+- **Autouzupełnianie ścieżek:** Dodano wsparcie dla podpowiadania ścieżek (tab-completion) w terminalu dla flag `--input` oraz `--output`.
+- **Sugestie w kreatorze:** W trybie interaktywnym (wizard) program teraz dynamicznie podpowiada dostępne pliki i foldery podczas wpisywania ścieżek.
+
 ## [1.3.3] - 2026-01-19
 
 ### Added
