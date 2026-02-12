@@ -90,12 +90,21 @@ var rootCmd = &cobra.Command{
 		return nil
 	},
 	Run: runGopress,
+	ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+		if len(args) == 0 {
+			return nil, cobra.ShellCompDirectiveDefault
+		}
+		return nil, cobra.ShellCompDirectiveNoFileComp
+	},
 }
 
 func init() {
 	// Input/Output
 	rootCmd.Flags().StringVarP(&appConfig.InputDir, "input", "i", "", "Ścieżka do folderu ze zdjęciami (możesz też przeciągnąć folder na okno)")
 	rootCmd.Flags().StringVarP(&appConfig.OutputDir, "output", "o", "", "Gdzie zapisać gotowe pliki (domyślnie tworzy folder 'webp' w środku)")
+
+	_ = rootCmd.MarkFlagFilename("input", "zip", "jpg", "jpeg", "png", "heic")
+	_ = rootCmd.MarkFlagDirname("output")
 
 	// Upload
 	rootCmd.Flags().BoolVar(&appConfig.Upload, "upload", false, "Wyślij gotowe pliki na serwer WordPress")

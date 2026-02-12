@@ -77,6 +77,7 @@ handleSurveyErr := func(err error) {
 	inputPrompt := &survey.Input{
 		Message: "Gdzie są zdjęcia (folder wejściowy)?",
 		Default: "./raw",
+		Suggest: suggestPaths,
 	}
 	err = survey.AskOne(inputPrompt, &appConfig.InputDir, survey.WithValidator(survey.Required))
 	handleSurveyErr(err)
@@ -95,6 +96,7 @@ handleSurveyErr := func(err error) {
 	outputPrompt := &survey.Input{
 		Message: fmt.Sprintf("Gdzie zapisać wyniki? Zostaw puste, aby użyć domyślnej lokalizacji: %s", defaultOut),
 		Default: defaultOut,
+		Suggest: suggestPaths,
 	}
 	err = survey.AskOne(outputPrompt, &appConfig.OutputDir)
 	handleSurveyErr(err)
@@ -167,4 +169,9 @@ func validateRange(min, max int) survey.Validator {
 		}
 		return nil
 	}
+}
+
+func suggestPaths(toComplete string) []string {
+	files, _ := filepath.Glob(toComplete + "*")
+	return files
 }
