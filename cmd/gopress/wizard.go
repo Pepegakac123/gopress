@@ -130,7 +130,7 @@ handleSurveyErr := func(err error) {
 
 		err = survey.AskOne(&survey.Input{
 			Message: "Użytkownik WP:",
-			Default: "admin",
+			Default: "overflow",
 		}, &appConfig.WpUser, survey.WithValidator(survey.Required))
 		handleSurveyErr(err)
 
