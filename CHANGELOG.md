@@ -7,6 +7,11 @@ a projekt przestrzega [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+## [1.3.5] - 2026-02-19
+
+### Added
+- **Inteligentna kompresja:** Automatyczne dostosowanie jakości (maks. 75% dla plików >4.5MB i maks. 60% dla plików >10MB), jeśli użytkownik nie wymusił niższej wartości.
+
 ## [1.3.4] - 2026-02-12
 
 ### Added

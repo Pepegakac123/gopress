@@ -76,3 +76,28 @@ func createSampleImage(t *testing.T, path string, width, height int) {
 		t.Fatalf("Failed to encode JPEG: %v", err)
 	}
 }
+
+func TestAdjustQuality(t *testing.T) {
+	tests := []struct {
+		name     string
+		fileSize int64
+		quality  int
+		want     int
+	}{
+		{"Small file, high quality", 100, 90, 90},
+		{"Small file, low quality", 100, 50, 50},
+		{"Medium file (>4.5MB), high quality", 5000000, 90, 75},
+		{"Medium file (>4.5MB), low quality", 5000000, 50, 50},
+		{"Large file (>10MB), high quality", 11000000, 90, 60},
+		{"Large file (>10MB), medium quality", 11000000, 70, 60},
+		{"Large file (>10MB), low quality", 11000000, 40, 40},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := adjustQuality(tt.fileSize, tt.quality); got != tt.want {
+				t.Errorf("adjustQuality() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}

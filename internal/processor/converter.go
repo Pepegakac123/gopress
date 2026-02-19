@@ -32,6 +32,8 @@ func ConvertFile(inputPath string, outputDir string, quality int, maxWidth int) 
 		return 0, "", fmt.Errorf("nie udało się pobrać informacji o pliku: %w", err)
 	}
 
+	quality = adjustQuality(info.Size(), quality)
+
 	if ext == ".webp" && info.Size() < 400*1024 {
 		fileName := filepath.Base(inputPath)
 		outPath := filepath.Join(outputDir, fileName)
@@ -138,4 +140,20 @@ func ConvertFile(inputPath string, outputDir string, quality int, maxWidth int) 
 	}
 
 	return stat.Size(), outPath, nil
+}
+
+func adjustQuality(fileSize int64, quality int) int {
+	const size4_5MB = 4718592 // 4.5 * 1024 * 1024
+	const size10MB = 10485760 // 10 * 1024 * 1024
+
+	if fileSize > size10MB {
+		if quality > 60 {
+			return 60
+		}
+	} else if fileSize > size4_5MB {
+		if quality > 75 {
+			return 75
+		}
+	}
+	return quality
 }
