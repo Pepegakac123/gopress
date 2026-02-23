@@ -103,7 +103,9 @@ func (c *Client) GetMediaSourceURL(attachmentID string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	req.SetBasicAuth(c.username, c.password)
+	if c.username != "" && c.password != "" {
+		req.SetBasicAuth(c.username, c.password)
+	}
 
 	resp, err := c.http.Do(req)
 	if err != nil {

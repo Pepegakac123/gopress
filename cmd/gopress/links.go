@@ -21,9 +21,9 @@ przeszukuje jego podfoldery i dla każdego z nich wypisuje listę bezpośrednich
 }
 
 func runLinksLister(cmd *cobra.Command, args []string) {
-	if appConfig.WpDomain == "" || appConfig.WpUser == "" || appConfig.WpPassword == "" || appConfig.FileBirdToken == "" {
-		fmt.Println("Błąd: Musisz podać --wp-domain, --wp-user, --wp-secret oraz --fb-token.")
-		fmt.Println("Przykład: gopress links --wp-domain https://example.com --wp-user admin --wp-secret \"XXXX XXXX XXXX\" --fb-token \"XXXX\"")
+	if appConfig.WpDomain == "" || appConfig.FileBirdToken == "" {
+		fmt.Println("Błąd: Musisz podać przynajmniej --wp-domain oraz --fb-token.")
+		fmt.Println("Przykład: gopress links --wp-domain https://example.com --fb-token \"XXXX\"")
 		os.Exit(1)
 	}
 
