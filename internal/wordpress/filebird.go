@@ -92,8 +92,12 @@ func (c *Client) GetFileBirdAttachmentIDs(folderID int) ([]string, error) {
 	return res.Data.AttachmentIDs, nil
 }
 
-// GetMediaSourceURL pobiera bezpośredni URL załącznika na podstawie jego ID
+// GetMediaSourceURL pobiera bezpośredni URL załącznika na podstawie jego ID z uwzględnieniem cache'u
 func (c *Client) GetMediaSourceURL(attachmentID string) (string, error) {
+	if url, exists := c.linkCache[attachmentID]; exists {
+		return url, nil
+	}
+
 	endpoint := fmt.Sprintf("%s/wp/v2/media/%s", c.baseURL, attachmentID)
 	req, err := http.NewRequest("GET", endpoint, nil)
 	if err != nil {
@@ -116,5 +120,6 @@ func (c *Client) GetMediaSourceURL(attachmentID string) (string, error) {
 		return "", fmt.Errorf("błąd dekodowania JSON: %w", err)
 	}
 
+	c.linkCache[attachmentID] = media.SourceURL
 	return media.SourceURL, nil
 }

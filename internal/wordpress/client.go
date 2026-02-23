@@ -14,6 +14,7 @@ type Client struct {
 	password    string
 	bearerToken string
 	http        *http.Client
+	linkCache   map[string]string // Cache: attachmentID -> SourceURL
 }
 
 // NewClient to konstruktor
@@ -29,6 +30,7 @@ func NewClient(domain, user, password, bearerToken string) *Client {
 		http: &http.Client{
 			Timeout: time.Second * 30,
 		},
+		linkCache: make(map[string]string),
 	}
 }
 
