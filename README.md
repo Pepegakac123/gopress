@@ -36,15 +36,15 @@ chmod +x gopress-linux
 
 ## Sposób użycia
 
-Aplikacja może działać w dwóch trybach:
-
-**Nowość w v1.3.4:** Wsparcie dla autouzupełniania ścieżek (klawisz Tab) dla flag CLI oraz sugestie ścieżek w trybie interaktywnym.
+Aplikacja oferuje trzy główne tryby pracy:
 
 1. **Tryb Interaktywny (Kreator):** Uruchom program bez żadnych argumentów. Aplikacja poprowadzi Cię krok po kroku, pytając o folder źródłowy, dane do WordPressa itp.
 
-2. **Tryb Cichy (CLI):** Uruchom program z flagami, aby w pełni zautomatyzować proces.
+2. **Tryb Cichy (CLI):** Uruchom program z flagami, aby w pełni zautomatyzować proces konwersji i przesyłania.
 
-### Dostępne Flagi
+3. **Tryb Listowania Linków (`links`):** Nowa funkcja (v1.4.0) pozwalająca na interaktywne pobieranie bezpośrednich adresów URL do zdjęć już znajdujących się na serwerze (wymaga FileBird).
+
+### Dostępne Komendy i Flagi
 
 | Flaga | Opis |
 | :--- | :--- |
@@ -62,22 +62,15 @@ Aplikacja może działać w dwóch trybach:
 
 ### Przykłady
 
-**Szybka konwersja folderu:**
+**Pobieranie linków (Interaktywne TUI):**
 ```bash
-./gopress -i "./zdjecia"
-```
-
-**Konwersja pliku ZIP:**
-```bash
-./gopress -i "./wakacje.zip"
+./gopress links --wp-domain "https://twoja-strona.pl" --fb-token "twój-token"
 ```
 
 **Pełna automatyzacja (konwersja + upload do WP):**
 ```bash
 ./gopress -i "./nowe-produkty" --upload \
   --wp-domain "https://sklep.pl" \
-  --wp-user "admin" \
-  --wp-secret "xxxx xxxx xxxx xxxx" \
   --fb-token "moj-token-filebird" \
   --width 1920
 ```
@@ -90,7 +83,7 @@ Aby przesyłanie plików działało, musisz wygenerować **Hasło Aplikacji** (A
 2. Znajdź sekcję "Hasła aplikacji".
 3. Nadaj nazwę (np. "GoPress"), wygeneruj hasło i skopiuj je.
 
-Jeśli chcesz zachować strukturę folderów, zainstaluj wtyczkę **FileBird**, wygeneruj token API w jej ustawieniach i podaj go jako parametr `--fb-token`.
+Jeśli chcesz zachować strukturę folderów lub korzystać z komendy `links`, zainstaluj wtyczkę **FileBird**, wygeneruj token API w jej ustawieniach i podaj go jako parametr `--fb-token`.
 
 ## Budowanie ze źródeł
 

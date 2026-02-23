@@ -115,3 +115,20 @@ func restartApplication() {
 
 	os.Exit(0)
 }
+
+func cleanMarkdown(md string) string {
+	// Usuwamy pogrubienie
+	md = strings.ReplaceAll(md, "**", "")
+	// Usuwamy nagłówki (np. ### )
+	lines := strings.Split(md, "\n")
+	var cleaned []string
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if strings.HasPrefix(trimmed, "#") {
+			cleaned = append(cleaned, strings.TrimLeft(trimmed, "# "))
+		} else {
+			cleaned = append(cleaned, line)
+		}
+	}
+	return strings.TrimSpace(strings.Join(cleaned, "\n"))
+}

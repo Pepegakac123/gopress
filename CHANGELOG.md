@@ -7,6 +7,24 @@ a projekt przestrzega [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-02-23
+
+### Added
+- **Nowa komenda `links`:** Interaktywne narzędzie (TUI) do listowania bezpośrednich linków do zdjęć z folderów FileBird na WordPressie.
+  - Pozwala na szybki wybór podfolderu z listy.
+  - Posiada wbudowane cachowanie linków w obrębie sesji (szybsze działanie).
+  - Obsługuje publiczny dostęp do mediów (nie wymaga flag autoryzacji WP przy samym listowaniu).
+  - Przykład użycia: `gopress links --wp-domain https://example.com --fb-token "TWÓJ_TOKEN"`
+
+### Fixed
+- **Rotacja zdjęć pionowych:** Naprawiono błąd, przez który zdjęcia pionowe (JPEG i HEIC) były nieprawidłowo obracane podczas konwersji do WebP.
+  - Dodano `AutoOrientation` dla formatów standardowych.
+  - Naprawiono obsługę 4-bajtowego offsetu EXIF w plikach HEIC.
+
+### Changed
+- **Persistent Flags:** Flagi `--wp-domain`, `--wp-user`, `--wp-secret` oraz `--fb-token` są teraz flagami trwałymi (persistent), co pozwala na ich użycie we wszystkich podkomendach.
+- **Poprawa wyglądu aktualizacji:** Changelog wyświetlany podczas aktualizacji programu jest teraz czyszczony ze znaczników Markdown, co poprawia czytelność w terminalu.
+
 ## [1.3.5] - 2026-02-19
 
 ### Added

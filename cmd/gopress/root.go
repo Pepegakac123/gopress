@@ -60,13 +60,12 @@ var rootCmd = &cobra.Command{
 			var cumulativeChangelog strings.Builder
 			for _, release := range newerReleases {
 				if release.GetBody() != "" {
-					cumulativeChangelog.WriteString(fmt.Sprintf("\n## Zmiany w wersji %s:\n", release.GetTagName()))
-					cumulativeChangelog.WriteString(strings.TrimSpace(release.GetBody()) + "\n")
+					cumulativeChangelog.WriteString(fmt.Sprintf("\n--- Zmiany w wersji %s ---\n", release.GetTagName()))
+					cumulativeChangelog.WriteString(cleanMarkdown(release.GetBody()) + "\n")
 				}
 			}
 
 			if cumulativeChangelog.Len() > 0 {
-				fmt.Println("\n---")
 				fmt.Println(cumulativeChangelog.String())
 				fmt.Println("---")
 			}
