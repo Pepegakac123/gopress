@@ -110,17 +110,20 @@ func init() {
 	rootCmd.Flags().BoolVar(&appConfig.Upload, "upload", false, "Wyślij gotowe pliki na serwer WordPress")
 
 	// WP Config
-	rootCmd.Flags().StringVar(&appConfig.WpDomain, "wp-domain", "", "Adres strony (np. https://mojastrona.pl)")
-	rootCmd.Flags().StringVar(&appConfig.WpUser, "wp-user", "", "Twój login do WordPressa")
-	rootCmd.Flags().StringVar(&appConfig.WpPassword, "wp-secret", "", "Hasło Aplikacji (NIE twoje hasło do logowania!). Wygeneruj w: Użytkownicy -> Profil")
+	rootCmd.PersistentFlags().StringVar(&appConfig.WpDomain, "wp-domain", "", "Adres strony (np. https://mojastrona.pl)")
+	rootCmd.PersistentFlags().StringVar(&appConfig.WpUser, "wp-user", "", "Twój login do WordPressa")
+	rootCmd.PersistentFlags().StringVar(&appConfig.WpPassword, "wp-secret", "", "Hasło Aplikacji (NIE twoje hasło do logowania!). Wygeneruj w: Użytkownicy -> Profil")
+	rootCmd.PersistentFlags().StringVar(&appConfig.FileBirdToken, "fb-token", "", "Token FileBird (jeśli chcesz zachować strukturę folderów) i strona używa wtyczki FileBird")
+
 	rootCmd.Flags().IntVarP(&appConfig.Quality, "quality", "q", 80, "Jakość obrazu (0-100). 80 to złoty środek.")
 	rootCmd.Flags().IntVarP(&appConfig.MaxWidth, "width", "w", 2560, "Maksymalna szerokość w px (program pomniejszy duże zdjęcia, ale nie powiększy małych)")
 	rootCmd.Flags().BoolVarP(&appConfig.DeleteOriginals, "delete", "d", false, "USUŃ oryginały po konwersji (Ostrożnie! Tej operacji nie da się cofnąć)")
-	rootCmd.Flags().StringVar(&appConfig.FileBirdToken, "fb-token", "", "Token FileBird (jeśli chcesz zachować strukturę folderów) i strona używa wtyczki FileBird")
 
 	// Globalne info/aktualizacja
 	rootCmd.Flags().BoolVarP(&appConfig.Version, "version", "v", false, "Wyświetl wersję programu")
 	rootCmd.Flags().BoolVar(&appConfig.Update, "update", false, "Sprawdź i zainstaluj aktualizację")
+
+	rootCmd.AddCommand(linksCmd)
 }
 
 func Execute() {

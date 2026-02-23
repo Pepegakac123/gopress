@@ -61,7 +61,7 @@ func runWizard() {
 		fmt.Println("(Aktualna)")
 	}
 
-handleSurveyErr := func(err error) {
+	handleSurveyErr := func(err error) {
 		if err == nil {
 			return
 		}
