@@ -72,6 +72,14 @@ func ConvertFile(inputPath string, outputDir string, quality int, maxWidth int) 
 		// Obsługa rotacji EXIF dla HEIC
 		if _, err := file.Seek(0, 0); err == nil {
 			if exifData, err := goheif.ExtractExif(file); err == nil {
+				// Pliki HEIC w boksie Exif mają 4-bajtowy offset przed nagłówkiem TIFF (II lub MM).
+				// Biblioteka goexif oczekuje nagłówka TIFF na samym początku.
+				if len(exifData) > 4 {
+					if (exifData[4] == 'I' && exifData[5] == 'I') || (exifData[4] == 'M' && exifData[5] == 'M') {
+						exifData = exifData[4:]
+					}
+				}
+
 				if x, err := exif.Decode(bytes.NewReader(exifData)); err == nil {
 					if tag, err := x.Get(exif.Orientation); err == nil {
 						if orient, err := tag.Int(0); err == nil {
@@ -97,10 +105,11 @@ func ConvertFile(inputPath string, outputDir string, quality int, maxWidth int) 
 			}
 		}
 	} else {
-		// Używamy imaging.Open, który automatycznie obsługuje orientację EXIF
-		src, err = imaging.Open(inputPath)
+		// Używamy imaging.Open z opcją AutoOrientation(true), aby automatycznie obrócić obraz na podstawie EXIF.
+		// Domyślnie ta opcja jest wyłączona, co powodowało problemy ze zdjęciami pionowymi.
+		src, err = imaging.Open(inputPath, imaging.AutoOrientation(true))
 		if err != nil {
-			return 0, "", fmt.Errorf("nieznany format obrazu: %w", err)
+			return 0, "", fmt.Errorf("nie udało się otworzyć obrazu: %w", err)
 		}
 	}
 
@@ -111,11 +120,14 @@ func ConvertFile(inputPath string, outputDir string, quality int, maxWidth int) 
 	} else {
 		dst = src
 	}
-	bounds := dst.Bounds()
-	imgRGBA := image.NewRGBA(bounds)
-	fileName := filepath.Base(inputPath)
-	draw.Draw(imgRGBA, bounds, dst, bounds.Min, draw.Src)
 
+	bounds := dst.Bounds()
+	// Tworzymy nowy obraz RGBA o wymiarach dst, zaczynający się od (0,0).
+	// To zapewnia "czysty" obraz bez metadanych i poprawną strukturę dla kodera WebP.
+	imgRGBA := image.NewRGBA(image.Rect(0, 0, bounds.Dx(), bounds.Dy()))
+	draw.Draw(imgRGBA, imgRGBA.Bounds(), dst, bounds.Min, draw.Src)
+
+	fileName := filepath.Base(inputPath)
 	name := strings.TrimSuffix(fileName, filepath.Ext(fileName))
 
 	outPath := filepath.Join(outputDir, name+".webp")
