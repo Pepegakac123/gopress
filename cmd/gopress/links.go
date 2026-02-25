@@ -43,18 +43,85 @@ func runLinksLister(cmd *cobra.Command, args []string) {
 	root := findRootRecursive(folders, targetName, shortTargetName)
 	if root == nil {
 		fmt.Printf("Nie znaleziono folderu o nazwie zawierającej \"%s\" lub \"%s\".\n", targetName, shortTargetName)
-		os.Exit(1)
+		
+		var err error
+		root, err = selectFolderInteractively(folders)
+		if err != nil {
+			if err == terminal.InterruptErr {
+				os.Exit(0)
+			}
+			fmt.Printf("Błąd wyboru folderu: %v\n", err)
+			os.Exit(1)
+		}
 	}
 
-	fmt.Printf("Znaleziono folder: %s (ID: %d)\n", root.Text, root.ID)
+	fmt.Printf("Wybrany folder: %s (ID: %d)\n", root.Text, root.ID)
 
 	if len(root.Children) == 0 {
-		fmt.Println("Brak podfolderów w folderze głównym.")
+		printFolderLinks(client, root.Text, root.ID)
 		return
 	}
 
 	// Menu TUI
 	showTUI(client, root)
+}
+
+func selectFolderInteractively(folders []wordpress.FbFolder) (*wordpress.FbFolder, error) {
+	type folderOption struct {
+		path string
+		f    *wordpress.FbFolder
+	}
+
+	var options []folderOption
+	var flatten func(fs []wordpress.FbFolder, prefix string)
+	flatten = func(fs []wordpress.FbFolder, prefix string) {
+		for i := range fs {
+			f := &fs[i]
+			fullPath := f.Text
+			if prefix != "" {
+				fullPath = prefix + " > " + f.Text
+			}
+			options = append(options, folderOption{path: fullPath, f: f})
+			if len(f.Children) > 0 {
+				flatten(f.Children, fullPath)
+			}
+		}
+	}
+
+	flatten(folders, "")
+
+	if len(options) == 0 {
+		return nil, fmt.Errorf("brak dostępnych folderów w WordPress")
+	}
+
+	sort.Slice(options, func(i, j int) bool {
+		return strings.ToLower(options[i].path) < strings.ToLower(options[j].path)
+	})
+
+	optionStrings := make([]string, len(options))
+	for i, o := range options {
+		optionStrings[i] = o.path
+	}
+
+	var selectedPath string
+	prompt := &survey.Select{
+		Message:  "Wybierz folder z listy:",
+		Options:  optionStrings,
+		PageSize: 15,
+	}
+
+	err := survey.AskOne(prompt, &selectedPath)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, o := range options {
+		if o.path == selectedPath {
+			return o.f, nil
+		}
+	}
+
+	return nil, fmt.Errorf("nieoczekiwany błąd wyboru")
 }
 
 func findRootRecursive(folders []wordpress.FbFolder, name, shortName string) *wordpress.FbFolder {
