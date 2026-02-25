@@ -7,6 +7,12 @@ a projekt przestrzega [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+## [1.4.1] - 2026-02-25
+
+### Added
+- **Interaktywny wybór folderu:** W przypadku, gdy komenda `links` nie znajdzie automatycznie folderu docelowego, użytkownik może teraz ręcznie wybrać folder z pełnej listy dostępnej w FileBird.
+- **Bezpośrednie listowanie linków:** Dodano możliwość wyświetlania linków bezpośrednio z wybranego folderu, jeśli nie posiada on podfolderów.
+
 ## [1.4.0] - 2026-02-23
 
 ### Added
