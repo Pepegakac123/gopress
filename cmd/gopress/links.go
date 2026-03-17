@@ -58,7 +58,7 @@ func runLinksLister(cmd *cobra.Command, args []string) {
 	fmt.Printf("Wybrany folder: %s (ID: %d)\n", root.Text, root.ID)
 
 	if len(root.Children) == 0 {
-		printFolderLinks(client, root.Text, root.ID)
+		printFolderLinks(client, root, false)
 		return
 	}
 
@@ -144,27 +144,37 @@ func findRootRecursive(folders []wordpress.FbFolder, name, shortName string) *wo
 }
 
 func showTUI(client *wordpress.Client, root *wordpress.FbFolder) {
-	// Przygotuj listę nazw podfolderów do wyboru
-	subfoldersMap := make(map[string]int)
-	subfolderNames := []string{}
-
-	for _, sub := range root.Children {
-		subfoldersMap[sub.Text] = sub.ID
-		subfolderNames = append(subfolderNames, sub.Text)
-	}
-	sort.Strings(subfolderNames)
-
-	const exitOpt = "❌ Wyjdź"
-	const allOpt = "📁 Wszystkie (lista zbiorcza)"
+	const exitOpt = "❌ Wyjdź / Powrót"
+	const allOpt = "📁 Wszystkie z tego poziomu (lista zbiorcza)"
+	const recursiveOpt = "🔄 Rekurencyjnie wszystkie (ten folder + podfoldery)"
 
 	for {
-		options := append([]string{allOpt}, subfolderNames...)
+		// Mapujemy opcje na foldery
+		optionsMap := make(map[string]*wordpress.FbFolder)
+		var options []string
+
+		options = append(options, recursiveOpt)
+		options = append(options, allOpt)
+
+		// Dodaj podfoldery do listy opcji
+		var subfolderNames []string
+		for i := range root.Children {
+			sub := &root.Children[i]
+			label := "📁 " + sub.Text
+			if len(sub.Children) > 0 {
+				label = "📂 " + sub.Text + " (zawiera podfoldery)"
+			}
+			optionsMap[label] = sub
+			subfolderNames = append(subfolderNames, label)
+		}
+		sort.Strings(subfolderNames)
+		options = append(options, subfolderNames...)
 		options = append(options, exitOpt)
 
 		var selected string
 		prompt := &survey.Select{
-			Message: "Wybierz podfolder, aby zobaczyć linki:",
-			Options: options,
+			Message:  fmt.Sprintf("Folder: %s. Wybierz opcję:", root.Text),
+			Options:  options,
 			PageSize: 15,
 		}
 
@@ -181,27 +191,54 @@ func showTUI(client *wordpress.Client, root *wordpress.FbFolder) {
 			break
 		}
 
-		if selected == allOpt {
-			printAllFolders(client, root.Children)
+		if selected == recursiveOpt {
+			printFolderLinks(client, root, true)
+		} else if selected == allOpt {
+			printAllFolders(client, root.Children, false)
 		} else {
-			folderID := subfoldersMap[selected]
-			printFolderLinks(client, selected, folderID)
+			subFolder := optionsMap[selected]
+			if len(subFolder.Children) > 0 {
+				// Jeśli ma podfoldery, zapytaj czy wejść czy wypisać
+				var action string
+				actionPrompt := &survey.Select{
+					Message: fmt.Sprintf("Folder \"%s\" ma podfoldery. Co chcesz zrobić?", subFolder.Text),
+					Options: []string{"Otwórz folder", "Wypisz linki bezpośrednie", "Wypisz wszystko rekurencyjnie", "Anuluj"},
+				}
+				survey.AskOne(actionPrompt, &action)
+
+				switch action {
+				case "Otwórz folder":
+					showTUI(client, subFolder)
+				case "Wypisz linki bezpośrednie":
+					printFolderLinks(client, subFolder, false)
+				case "Wypisz wszystko rekurencyjnie":
+					printFolderLinks(client, subFolder, true)
+				}
+			} else {
+				printFolderLinks(client, subFolder, false)
+			}
 		}
 
 		fmt.Println("\n---")
 	}
 }
 
-func printFolderLinks(client *wordpress.Client, name string, id int) {
-	fmt.Printf("\n🔍 Pobieranie linków dla: %s...\n", name)
-	attachmentIDs, err := client.GetFileBirdAttachmentIDs(id)
+func printFolderLinks(client *wordpress.Client, folder *wordpress.FbFolder, recursive bool) {
+	if recursive {
+		fmt.Printf("\n🔄 Pobieranie linków REKURENCYJNIE dla: %s...\n", folder.Text)
+		printFolderLinksRecursive(client, folder)
+		return
+	}
+
+	fmt.Printf("\n🔍 Pobieranie linków dla: %s...\n", folder.Text)
+	attachmentIDs, err := client.GetFileBirdAttachmentIDs(folder.ID)
 	if err != nil {
 		fmt.Printf("  Błąd: %v\n", err)
 		return
 	}
 
 	if len(attachmentIDs) == 0 {
-		fmt.Println("  (Brak zdjęć w tym folderze)")
+		fmt.Println("  (Brak bezpośrednich zdjęć w tym folderze)")
 		return
 	}
 
@@ -215,25 +252,28 @@ func printFolderLinks(client *wordpress.Client, name string, id int) {
 	}
 }
 
-func printAllFolders(client *wordpress.Client, subs []wordpress.FbFolder) {
-	fmt.Println("\n📦 Generowanie pełnej listy linków...")
-	for _, sub := range subs {
-		fmt.Printf("\n%s\n", sub.Text)
-		attachmentIDs, err := client.GetFileBirdAttachmentIDs(sub.ID)
-		if err != nil {
-			fmt.Printf("  Błąd: %v\n", err)
-			continue
-		}
-		if len(attachmentIDs) == 0 {
-			fmt.Println("  (Brak zdjęć)")
-			continue
-		}
+func printFolderLinksRecursive(client *wordpress.Client, folder *wordpress.FbFolder) {
+	// Wypisz zdjęcia z bieżącego folderu
+	attachmentIDs, err := client.GetFileBirdAttachmentIDs(folder.ID)
+	if err == nil && len(attachmentIDs) > 0 {
+		fmt.Printf("\n--- Folder: %s ---\n", folder.Text)
 		for _, aid := range attachmentIDs {
 			url, err := client.GetMediaSourceURL(aid)
-			if err != nil {
-				continue
+			if err == nil {
+				fmt.Println(url)
 			}
-			fmt.Println(url)
 		}
+	}
+
+	// Wypisz zdjęcia z podfolderów
+	for i := range folder.Children {
+		printFolderLinksRecursive(client, &folder.Children[i])
+	}
+}
+
+func printAllFolders(client *wordpress.Client, subs []wordpress.FbFolder, recursive bool) {
+	fmt.Println("\n📦 Generowanie listy linków...")
+	for i := range subs {
+		printFolderLinks(client, &subs[i], recursive)
 	}
 }

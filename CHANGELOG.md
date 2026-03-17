@@ -7,6 +7,13 @@ a projekt przestrzega [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+## [1.4.2] - 2026-03-17
+
+### Added
+- **Głębokie zagnieżdżenie folderów:** Komenda `links` obsługuje teraz nawigację w głąb struktury folderów FileBird. Jeśli folder zawiera podfoldery, użytkownik może zdecydować o wejściu do środka lub wypisaniu linków.
+- **Rekurencyjne listowanie linków:** Dodano opcję "Rekurencyjnie wszystkie", która pozwala na zbiorcze pobranie linków ze wskazanego folderu oraz wszystkich jego podfolderów na dowolnym poziomie zagłębienia.
+- **Usprawnione menu TUI:** Nowe ikony i czytelniejszy podział akcji w interaktywnym menu wyboru folderów.
+
 ## [1.4.1] - 2026-02-25
 
 ### Added
