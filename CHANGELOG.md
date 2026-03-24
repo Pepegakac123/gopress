@@ -7,6 +7,15 @@ a projekt przestrzega [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+## [1.4.3] - 2026-03-24
+
+### Fixed
+- **Pętla nawigacji w `links`:** Poprawiono błąd, przez który program kończył działanie po jednym wyświetleniu linków. Teraz nawigacja odbywa się w pętli, dopóki użytkownik nie wybierze opcji wyjścia.
+- **Menu wyboru folderu:** Dodano opcję "❌ WYJDŹ Z PROGRAMU" do głównego menu wyboru folderów FileBird.
+
+### Changed
+- **Gitignore:** Zaktualizowano listę ignorowanych plików, aby lepiej obsługiwać lokalne pliki wykonywalne i artefakty budowania na Linuxie.
+
 ## [1.4.2] - 2026-03-17
 
 ### Added
