@@ -1,9 +1,17 @@
 # Binaries
-gopress.exe
-bin/
+/gopress
+/gopress.exe
+/gopress-*
+/bin/
 # Local data / Temp
 tmp_data/
 playground/
 *.log
 *.exe
 *.old
+*.obj
+*.o
+*.so
+*.dylib
+*.dll
+*.out

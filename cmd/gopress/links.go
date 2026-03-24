@@ -36,37 +36,47 @@ func runLinksLister(cmd *cobra.Command, args []string) {
 		os.Exit(1)
 	}
 
-	// Heurystyka: szukamy folderu głównego rekurencyjnie
+	// Heurystyka: szukamy folderu głównego rekurencyjnie (tylko przy pierwszym uruchomieniu pętli)
 	targetName := "5 zdjęć do każdej usługi"
 	shortTargetName := "5 zdjęć"
-
 	root := findRootRecursive(folders, targetName, shortTargetName)
-	if root == nil {
-		fmt.Printf("Nie znaleziono folderu o nazwie zawierającej \"%s\" lub \"%s\".\n", targetName, shortTargetName)
-		
-		var err error
-		root, err = selectFolderInteractively(folders)
-		if err != nil {
-			if err == terminal.InterruptErr {
-				os.Exit(0)
+
+	for {
+		if root == nil {
+			var err error
+			root, err = selectFolderInteractively(folders)
+			if err != nil {
+				if err == terminal.InterruptErr {
+					fmt.Println("\nPrzerwano przez użytkownika.")
+					return
+				}
+				fmt.Printf("Błąd wyboru folderu: %v\n", err)
+				return
 			}
-			fmt.Printf("Błąd wyboru folderu: %v\n", err)
-			os.Exit(1)
+			// Jeśli użytkownik wybrał wyjście (zwrócony root jest nil)
+			if root == nil {
+				return
+			}
 		}
+
+		fmt.Printf("\n--- Aktualny folder: %s (ID: %d) ---\n", root.Text, root.ID)
+
+		if len(root.Children) == 0 {
+			printFolderLinks(client, root, false)
+			fmt.Println("\n(Koniec folderu bez podfolderów)")
+		} else {
+			// Menu TUI
+			showTUI(client, root)
+		}
+
+		// Resetujemy root, aby przy kolejnej iteracji użytkownik mógł wybrać inny folder
+		root = nil
+		fmt.Println("\n--- Powrót do menu wyboru folderu ---")
 	}
-
-	fmt.Printf("Wybrany folder: %s (ID: %d)\n", root.Text, root.ID)
-
-	if len(root.Children) == 0 {
-		printFolderLinks(client, root, false)
-		return
-	}
-
-	// Menu TUI
-	showTUI(client, root)
 }
 
 func selectFolderInteractively(folders []wordpress.FbFolder) (*wordpress.FbFolder, error) {
+	const exitLabel = "❌ WYJDŹ Z PROGRAMU"
 	type folderOption struct {
 		path string
 		f    *wordpress.FbFolder
@@ -98,9 +108,10 @@ func selectFolderInteractively(folders []wordpress.FbFolder) (*wordpress.FbFolde
 		return strings.ToLower(options[i].path) < strings.ToLower(options[j].path)
 	})
 
-	optionStrings := make([]string, len(options))
-	for i, o := range options {
-		optionStrings[i] = o.path
+	optionStrings := make([]string, 0, len(options)+1)
+	optionStrings = append(optionStrings, exitLabel)
+	for _, o := range options {
+		optionStrings = append(optionStrings, o.path)
 	}
 
 	var selectedPath string
@@ -113,6 +124,10 @@ func selectFolderInteractively(folders []wordpress.FbFolder) (*wordpress.FbFolde
 	err := survey.AskOne(prompt, &selectedPath)
 	if err != nil {
 		return nil, err
+	}
+
+	if selectedPath == exitLabel {
+		return nil, nil // Sygnał wyjścia
 	}
 
 	for _, o := range options {
