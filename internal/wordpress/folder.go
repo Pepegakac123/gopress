@@ -52,7 +52,7 @@ func (c *Client) CreateFolder(name string, parentID int) (int, error) {
 		return 0, err
 	}
 
-	req, err := http.NewRequest("POST", endpoint, bytes.NewBuffer(jsonData))
+	req, err := c.newRequest("POST", endpoint, bytes.NewBuffer(jsonData))
 	if err != nil {
 		return 0, err
 	}
@@ -102,7 +102,7 @@ func (c *Client) SetAttachmentFolder(folderID int, attachmentIDs []int) error {
 		return err
 	}
 
-	req, err := http.NewRequest("POST", endpoint, bytes.NewBuffer(jsonData))
+	req, err := c.newRequest("POST", endpoint, bytes.NewBuffer(jsonData))
 	if err != nil {
 		return err
 	}

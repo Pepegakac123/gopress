@@ -37,7 +37,7 @@ func (c *Client) GetFileBirdFolders() ([]FbFolder, error) {
 	}
 
 	endpoint := fmt.Sprintf("%s/filebird/public/v1/folders", c.baseURL)
-	req, err := http.NewRequest("GET", endpoint, nil)
+	req, err := c.newRequest("GET", endpoint, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -68,7 +68,7 @@ func (c *Client) GetFileBirdAttachmentIDs(folderID int) ([]string, error) {
 	}
 
 	endpoint := fmt.Sprintf("%s/filebird/public/v1/attachment-id/?folder_id=%d", c.baseURL, folderID)
-	req, err := http.NewRequest("GET", endpoint, nil)
+	req, err := c.newRequest("GET", endpoint, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -99,7 +99,7 @@ func (c *Client) GetMediaSourceURL(attachmentID string) (string, error) {
 	}
 
 	endpoint := fmt.Sprintf("%s/wp/v2/media/%s", c.baseURL, attachmentID)
-	req, err := http.NewRequest("GET", endpoint, nil)
+	req, err := c.newRequest("GET", endpoint, nil)
 	if err != nil {
 		return "", err
 	}

@@ -2,6 +2,7 @@ package wordpress
 
 import (
 	"fmt"
+	"io"
 	"net/http"
 	"strings"
 	"time"
@@ -34,12 +35,26 @@ func NewClient(domain, user, password, bearerToken string) *Client {
 	}
 }
 
+// newRequest tworzy nowe zapytanie HTTP z ustawionymi nagłówkami bezpieczeństwa.
+func (c *Client) newRequest(method, url string, body io.Reader) (*http.Request, error) {
+	req, err := http.NewRequest(method, url, body)
+	if err != nil {
+		return nil, err
+	}
+
+	// Ustawiamy User-Agent, aby uniknąć błędów 406 i blokad firewalli.
+	req.Header.Set("User-Agent", "GoPress/1.0 (WordPress Image Optimizer)")
+	req.Header.Set("Accept", "application/json, */*")
+
+	return req, nil
+}
+
 // CheckConnection sprawdza, czy dane logowania są poprawne.
 // Uderza w endpoint /users/me, który wymaga autoryzacji.
 func (c *Client) CheckConnection() error {
 	endpoint := fmt.Sprintf("%s/wp/v2/users/me", c.baseURL)
 
-	req, err := http.NewRequest("GET", endpoint, nil)
+	req, err := c.newRequest("GET", endpoint, nil)
 	if err != nil {
 		return err
 	}
@@ -62,7 +77,7 @@ func (c *Client) CheckFileBirdConnection() error {
 	}
 	endpoint := fmt.Sprintf("%s/filebird/public/v1/folders", c.baseURL)
 
-	req, err := http.NewRequest("GET", endpoint, nil)
+	req, err := c.newRequest("GET", endpoint, nil)
 	if err != nil {
 		return err
 	}

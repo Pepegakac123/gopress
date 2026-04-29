@@ -39,7 +39,7 @@ func (c *Client) UploadFile(filePath string) (*MediaResponse, error) {
 	}
 
 	endpoint := fmt.Sprintf("%s/wp/v2/media", c.baseURL)
-	req, err := http.NewRequest("POST", endpoint, body)
+	req, err := c.newRequest("POST", endpoint, body)
 	if err != nil {
 		return nil, err
 	}

@@ -7,6 +7,12 @@ a projekt przestrzega [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+## [1.4.4] - 2026-04-29
+
+### Fixed
+- **Błąd 406 Not Acceptable:** Rozwiązano problem z odrzucaniem zapytań przez WordPressa (lub firewall) poprzez dodanie standardowych nagłówków `User-Agent` oraz `Accept` do wszystkich żądań API.
+- **Stabilność komunikacji:** Zunifikowano sposób tworzenia zapytań HTTP wewnątrz modułu WordPress, co zapobiega blokadom bezpieczeństwa na restrykcyjnych hostingach.
+
 ## [1.4.3] - 2026-03-24
 
 ### Fixed
