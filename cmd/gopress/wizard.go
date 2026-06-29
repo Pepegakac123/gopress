@@ -101,6 +101,23 @@ func runWizard() {
 	err = survey.AskOne(outputPrompt, &appConfig.OutputDir)
 	handleSurveyErr(err)
 
+	// Kopia do galerii
+	var copyToGallery bool
+	err = survey.AskOne(&survey.Confirm{
+		Message: "Czy chcesz skopiować przetworzone zdjęcia do galerii lokalnej?",
+		Default: false,
+	}, &copyToGallery)
+	handleSurveyErr(err)
+
+	if copyToGallery {
+		err = survey.AskOne(&survey.Input{
+			Message: "Podaj ścieżkę do galerii lokalnej:",
+			Suggest: suggestPaths,
+		}, &appConfig.GalleryDir, survey.WithValidator(survey.Required))
+		handleSurveyErr(err)
+		appConfig.GalleryDir = sanitizePath(appConfig.GalleryDir)
+	}
+
 	// Pytanie 3: Jakość
 	err = survey.AskOne(&survey.Input{
 		Message: "Jakość obrazu WebP (0-100):",

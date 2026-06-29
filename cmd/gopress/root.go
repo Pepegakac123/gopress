@@ -12,6 +12,7 @@ import (
 type Config struct {
 	InputDir        string
 	OutputDir       string
+	GalleryDir      string
 	Upload          bool
 	WpDomain        string
 	WpUser          string
@@ -101,9 +102,11 @@ func init() {
 	// Input/Output
 	rootCmd.Flags().StringVarP(&appConfig.InputDir, "input", "i", "", "Ścieżka do folderu ze zdjęciami (możesz też przeciągnąć folder na okno)")
 	rootCmd.Flags().StringVarP(&appConfig.OutputDir, "output", "o", "", "Gdzie zapisać gotowe pliki (domyślnie tworzy folder 'webp' w środku)")
+	rootCmd.Flags().StringVarP(&appConfig.GalleryDir, "gallery", "g", "", "Ścieżka do galerii zdjęć, do której mają zostać skopiowane i zmergowane przetworzone zdjęcia")
 
 	_ = rootCmd.MarkFlagFilename("input", "zip", "jpg", "jpeg", "png", "heic")
 	_ = rootCmd.MarkFlagDirname("output")
+	_ = rootCmd.MarkFlagDirname("gallery")
 
 	// Upload
 	rootCmd.Flags().BoolVar(&appConfig.Upload, "upload", false, "Wyślij gotowe pliki na serwer WordPress")

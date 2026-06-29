@@ -11,6 +11,7 @@ import (
 	"syscall"
 
 	"github.com/AlecAivazis/survey/v2"
+	"github.com/Pepegakac123/gopress/internal/gallery"
 	"github.com/Pepegakac123/gopress/internal/processor"
 	"github.com/Pepegakac123/gopress/internal/scanner"
 	"github.com/Pepegakac123/gopress/internal/uploader"
@@ -116,6 +117,15 @@ func runGopress(cmd *cobra.Command, args []string) {
 		prepareFileBirdToken(wpClient)
 		useFileBird := appConfig.FileBirdToken != ""
 		uploader.Run(ctx, wpClient, convertedFiles, appConfig.OutputDir, useFileBird, 0)
+	}
+
+	if appConfig.GalleryDir != "" && len(convertedFiles) > 0 {
+		fmt.Printf("Kopiowanie i mergowanie zdjęć do galerii: %s...\n", appConfig.GalleryDir)
+		if err := gallery.CopyAndMerge(convertedFiles, appConfig.OutputDir, appConfig.GalleryDir); err != nil {
+			fmt.Printf("Błąd podczas kopiowania do galerii: %v\n", err)
+		} else {
+			fmt.Println("Kopiowanie do galerii zakończone sukcesem.")
+		}
 	}
 
 	var openResult bool

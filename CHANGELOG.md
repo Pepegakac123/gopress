@@ -7,6 +7,14 @@ a projekt przestrzega [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+## [1.4.5] - 2026-06-29
+
+### Added
+- **Kopiowanie do lokalnej galerii:** Nowa funkcjonalność umożliwiająca automatyczne kopiowanie przetworzonych zdjęć WebP do lokalnej galerii podanej przez użytkownika.
+- **Inteligentne scalanie folderów:** Program automatycznie wyszukuje istniejące foldery w galerii (bez względu na wielkość liter) i scala je, zachowując istniejącą nazwę folderu docelowego.
+- **Unikanie duplikatów:** Zapobieganie kopiowaniu i tworzeniu duplikatów zdjęć, jeśli plik o takiej samej nazwie (bez względu na wielkość liter) już istnieje w docelowej lokalizacji.
+- **Obsługa w CLI i Wizardzie:** Dodano nową flagę CLI `--gallery` (`-g`) oraz odpowiednie zapytanie w interaktywnym kreatorze.
+
 ## [1.4.4] - 2026-04-29
 
 ### Fixed
